@@ -20,7 +20,7 @@ class MainWindow(QMainWindow):
         self.root = root
         self.setMouseTracking(True)
 
-        self.setWindowTitle("My Awesome App")
+        self.setWindowTitle("PMC - PyMediaCenter")
 
         self.movies = Movies(self, callback=self.test)
         self.media_player = MediaPlayer(self)
