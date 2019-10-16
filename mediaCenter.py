@@ -149,6 +149,9 @@ class Root(ThreadMananger):
 
 app = QApplication(sys.argv)
 controller = Root()
-
-app.exec_()
-controller.close()
+try:
+    app.exec_()
+except KeyboardInterrupt:
+    pass
+finally:
+    controller.close()
