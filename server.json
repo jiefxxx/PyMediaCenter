@@ -1,0 +1,22 @@
+{
+    "database": {
+        "path": "/home/testing/test_server.db"
+    },
+    "rsc": {
+        "poster_path": "/home/testing/python-mediaMananger/images"
+    },
+    "videos": {
+        "downloads": {
+            "path": []
+        },
+        "movies": {
+            "path": [
+                "/media/film_1",
+                "/media/div/movies/2"
+            ]
+        },
+        "tvs": {
+            "path": []
+        }
+    }
+}

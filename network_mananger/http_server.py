@@ -1,0 +1,171 @@
+import os
+import re
+import time
+import magic
+import json
+
+from network_mananger import http_tools
+from network_mananger.network import Tcp_handler, Tcp_server_handler
+from thread_mananger.threadMananger import ThreadMananger, threadedFunction
+
+
+def chunk(path, seek, size=1024*5):
+    with open(path, "rb") as f:
+        f.seek(seek)
+        ret = f.read(size)
+    # print("chunk", path, seek, size, len(ret))
+    return seek+len(ret), ret
+
+
+def chunks(path, seek=-1, chunk_size=65500):
+    with open(path, "rb") as f:
+        if seek > 0:
+            f.seek(seek)
+        while True:
+            data = f.read(chunk_size)
+            if not data:
+                print(data)
+                break
+            yield data
+
+class HTTP_handler():
+    def __init__(self,server,connection,request,args=[],kwargs=[]):
+        self.request = request
+        self.response = http_tools.Response()
+        self.connection = connection
+        self.server = server
+        self.dead = False
+        if self.request.methode == "GET":
+            self.GET(self.request.url, *args, **kwargs)
+
+        elif self.request.methode == "PUT":
+            self.PUT(self.request.url, *args, **kwargs)
+
+        elif self.request.methode == "DELETE":
+            self.DELETE(self.request.url, *args, **kwargs)
+        else:
+            print("unknow methode", self.request.methode)
+
+    def GET(self,url):
+        pass
+
+    def PUT(self,url):
+        pass
+
+    def DELETE(self,url):
+        pass
+
+    def send_text(self, code, data=None):
+        self.response.code = code
+        if data is not None:
+            self.response.set_data(data)
+        self.connection.send(str(self.response).encode()+self.response.data)
+
+    def send_json(self, code, data={}):
+        dump = json.dumps(data, sort_keys=True, indent=4)
+        self.send_text(code, dump)
+
+    def send_header(self, code):
+        self.response.code = code
+        self.connection.send(str(self.response).encode())
+
+    def send_data(self, data):
+        if type(data) is str:
+            data = data.encode()
+        return self.connection.send(data, chunk_size=0)
+
+    def send_error(self, code):
+        self.send_header(code)
+        self.send_data("")
+
+    def send_file(self, path):
+        print("enter send file")
+        r = self.request.get_field("Range")
+        self.response.set_field("Content-type", magic.Magic(mime=True).from_file(path))
+        seek = 0
+        if r is not None:
+            seek = int(r.split("=")[1][:-1])
+        seek_end = os.path.getsize(path)-1  # seek end not fully implemented
+        full_size = os.path.getsize(path)
+        size = seek_end-seek+1
+
+        if seek >= 0 and r is not None:
+            self.response.set_field("Accept-Ranges", "bytes")
+            self.response.set_field("Content-Range", "bytes "+str(seek)+"-"+str(seek_end)+"/"+str(full_size))
+            self.response.set_field("Content-length", size)
+            self.send_header(206)
+        else:
+            self.response.set_field("Accept-Ranges", "bytes")
+            self.response.set_field("Content-length", os.path.getsize(path))
+            self.send_header(200)
+
+        print(path, seek, seek_end, size)
+
+        while True:
+            seek, data = chunk(path, seek)
+            while True:
+                if self.connection.dead:
+                    break
+                if self.send_data(data):
+                    break
+                time.sleep(0.05)
+
+            if seek >= full_size or self.connection.dead:
+                print("end ", self.connection.dead)
+                break
+
+
+class HTTP_connection(Tcp_handler):
+
+    def __init__(self, server):
+        Tcp_handler.__init__(self, "HTTP_handler")
+        self.current_Request = None
+        self.server = server
+        self.prev_data = b""
+        self.dead = False
+
+    def on_data(self,socket,data):
+        if self.current_Request is None:
+            self.current_Request =  http_tools.Request()
+        self.prev_data = self.current_Request.feed(self.prev_data+data)
+        if self.current_Request.completed():
+            self.server.execute_request(self, self.current_Request)
+            self.current_Request = None
+
+    def on_close(self, socket):
+        self.dead = True
+
+    def close(self):
+        self.dead = True
+
+
+class HTTP_server(Tcp_server_handler,ThreadMananger):
+    def __init__(self):
+        Tcp_server_handler.__init__(self,HTTP_connection)
+        ThreadMananger.__init__(self,nbr_thread=5)
+        self.route = []
+
+    @threadedFunction()
+    def execute_request(self,socket_handler,request):
+        handler,args,kwargs = self.get_route(request.url.path)
+        if handler is not None:
+            handler(self,socket_handler,request,args,kwargs)
+        else:
+            response = http_tools.Response()
+            response.code = 404
+            response.set_data("")
+            socket_handler.send(str(response).encode()+b"")
+
+    def get_route(self,path):
+        for regpath,handler,args,kwargs in self.route:
+            m = re.fullmatch(regpath,path)
+            if m is not None:
+                for i in range(0,len(m.groups())):
+                    args = list(args)
+                    args.insert(i,m.groups()[i])
+                    args = tuple(args)
+                return (handler,args,kwargs)
+        return (None,None,None)
+
+    def add_route(self,regpath,handler,*args,**kwargs):
+        self.route.append((regpath,handler,args,kwargs))

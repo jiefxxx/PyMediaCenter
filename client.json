@@ -1,0 +1,25 @@
+{
+    "database": {
+        "path": "./test.db"
+    },
+    "language": "fr_be",
+    "rsc": {
+        "poster_path": "./posters"
+    },
+    "tmdb": {
+        "api_key": "bd00b4d04b286b876c3455692a531120"
+    },
+    "videos": {
+        "downloads": {
+            "path": [
+                "/home/jief/T\u00e9l\u00e9chargements"
+            ]
+        },
+        "movies": {
+            "path": []
+        },
+        "tvs": {
+            "path": []
+        }
+    }
+}

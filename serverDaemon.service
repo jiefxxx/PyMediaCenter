@@ -1,0 +1,20 @@
+[Unit]
+Description=ServerDaemon
+After=network-online.target
+
+[Service]
+Type=simple
+
+User=testing
+Group=testing
+UMask=007
+
+ExecStart=/usr/bin/python3 /home/testing/python-mediaMananger/serverDaemon.py /home/testing/python-mediaMananger/server.json > /home/testing/log
+
+Restart=on-failure
+
+# Configures the time to wait before service is stopped forcefully.
+TimeoutStopSec=300
+
+[Install]
+WantedBy=multi-user.target
