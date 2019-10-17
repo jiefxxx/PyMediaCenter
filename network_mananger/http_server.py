@@ -41,16 +41,21 @@ class HTTP_handler():
 
         elif self.request.header.query == "DELETE":
             self.DELETE(self.request.header.url, *args, **kwargs)
+        elif self.request.header.query == "POST":
+            self.POST(self.request.header.url, *args, **kwargs)
         else:
             print("unknown method", self.request.header.query)
 
-    def GET(self, url):
+    def GET(self, url, *args, **kwargs):
         pass
 
-    def PUT(self, url):
+    def PUT(self, url, *args, **kwargs):
         pass
 
-    def DELETE(self, url):
+    def DELETE(self, url, *args, **kwargs):
+        pass
+
+    def POST(self, url, *args, **kwargs):
         pass
 
     def send_text(self, code, data=None, content_type="text/text"):

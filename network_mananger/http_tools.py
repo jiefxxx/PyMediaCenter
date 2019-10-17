@@ -1,5 +1,6 @@
 import http
 import io
+import json
 import os
 import re
 import time
@@ -120,7 +121,7 @@ class HTTPData:
             else:
                 self.current_size += len(data)
                 self.write(data)
-                ret = []
+                ret = b""
 
             if self.completed():
                 self.data_stream.seek(0)
@@ -133,6 +134,9 @@ class HTTPData:
 
     def read(self, size=-1):
         return self.data_stream.read(size)
+
+    def json(self):
+        return json.loads(self.read())
 
 
 class HTTPRequest:
