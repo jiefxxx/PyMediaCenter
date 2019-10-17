@@ -132,9 +132,9 @@ class MediaPlayer(QWidget):
         elif event.key() == Qt.Key_Escape:
             self.stop()
         elif event.key() == Qt.Key_Left:
-            self.media_player.set_time(self.media_player.get_time()-15*1000)
+            self.media_player.set_time(self.media_player.get_time() - 15 * 1000)
         elif event.key() == Qt.Key_Right:
-            self.media_player.set_time(self.media_player.get_time()+15*1000)
+            self.media_player.set_time(self.media_player.get_time() + 15 * 1000)
         elif event.key() == Qt.Key_Down:
             self.media_player.set_time(self.media_player.get_time() - 3 * 60 * 1000)
         elif event.key() == Qt.Key_Up:

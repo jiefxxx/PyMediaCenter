@@ -13,7 +13,6 @@ def chunk(path, seek, size=1024*5):
     with open(path, "rb") as f:
         f.seek(seek)
         ret = f.read(size)
-    # print("chunk", path, seek, size, len(ret))
     return seek+len(ret), ret
 
 
@@ -24,46 +23,51 @@ def chunks(path, seek=-1, chunk_size=65500):
         while True:
             data = f.read(chunk_size)
             if not data:
-                print(data)
                 break
             yield data
 
 class HTTP_handler():
-    def __init__(self,server,connection,request,args=[],kwargs=[]):
+    def __init__(self, server, connection, request, args=[], kwargs=[]):
         self.request = request
-        self.response = http_tools.Response()
+        self.response = http_tools.HTTPResponse()
         self.connection = connection
         self.server = server
         self.dead = False
-        if self.request.methode == "GET":
-            self.GET(self.request.url, *args, **kwargs)
+        if self.request.header.query == "GET":
+            self.GET(self.request.header.url, *args, **kwargs)
 
-        elif self.request.methode == "PUT":
-            self.PUT(self.request.url, *args, **kwargs)
+        elif self.request.header.query == "PUT":
+            self.PUT(self.request.header.url, *args, **kwargs)
 
-        elif self.request.methode == "DELETE":
-            self.DELETE(self.request.url, *args, **kwargs)
+        elif self.request.header.query == "DELETE":
+            self.DELETE(self.request.header.url, *args, **kwargs)
         else:
-            print("unknow methode", self.request.methode)
+            print("unknown method", self.request.header.query)
 
-    def GET(self,url):
+    def GET(self, url):
         pass
 
-    def PUT(self,url):
+    def PUT(self, url):
         pass
 
-    def DELETE(self,url):
+    def DELETE(self, url):
         pass
 
-    def send_text(self, code, data=None):
+    def send_text(self, code, data=None, content_type="text/text"):
         self.response.code = code
         if data is not None:
-            self.response.set_data(data)
-        self.connection.send(str(self.response).encode()+self.response.data)
+            if type(data)is str:
+                data = data.encode()
+            self.response.fields.set("Content-Length", str(len(data)))
+            self.response.fields.set("Content-type", content_type)
+        else:
+            data = b''
+
+        self.connection.send(str(self.response).encode()+data)
 
     def send_json(self, code, data={}):
         dump = json.dumps(data, sort_keys=True, indent=4)
-        self.send_text(code, dump)
+        self.send_text(code, dump, content_type="application/json")
 
     def send_header(self, code):
         self.response.code = code
@@ -79,9 +83,8 @@ class HTTP_handler():
         self.send_data("")
 
     def send_file(self, path):
-        print("enter send file")
-        r = self.request.get_field("Range")
-        self.response.set_field("Content-type", magic.Magic(mime=True).from_file(path))
+        r = self.request.header.fields.get("Range")
+        self.response.fields.set("Content-type", magic.Magic(mime=True).from_file(path))
         seek = 0
         if r is not None:
             seek = int(r.split("=")[1][:-1])
@@ -90,13 +93,13 @@ class HTTP_handler():
         size = seek_end-seek+1
 
         if seek >= 0 and r is not None:
-            self.response.set_field("Accept-Ranges", "bytes")
-            self.response.set_field("Content-Range", "bytes "+str(seek)+"-"+str(seek_end)+"/"+str(full_size))
-            self.response.set_field("Content-length", size)
+            self.response.fields.set("Accept-Ranges", "bytes")
+            self.response.fields.set("Content-Range", "bytes "+str(seek)+"-"+str(seek_end)+"/"+str(full_size))
+            self.response.fields.set("Content-length", size)
             self.send_header(206)
         else:
-            self.response.set_field("Accept-Ranges", "bytes")
-            self.response.set_field("Content-length", os.path.getsize(path))
+            self.response.fields.set("Accept-Ranges", "bytes")
+            self.response.fields.set("Content-length", os.path.getsize(path))
             self.send_header(200)
 
         print(path, seek, seek_end, size)
@@ -126,7 +129,7 @@ class HTTP_connection(Tcp_handler):
 
     def on_data(self,socket,data):
         if self.current_Request is None:
-            self.current_Request =  http_tools.Request()
+            self.current_Request = http_tools.HTTPRequest()
         self.prev_data = self.current_Request.feed(self.prev_data+data)
         if self.current_Request.completed():
             self.server.execute_request(self, self.current_Request)
@@ -139,33 +142,32 @@ class HTTP_connection(Tcp_handler):
         self.dead = True
 
 
-class HTTP_server(Tcp_server_handler,ThreadMananger):
+class HTTP_server(Tcp_server_handler, ThreadMananger):
     def __init__(self):
-        Tcp_server_handler.__init__(self,HTTP_connection)
-        ThreadMananger.__init__(self,nbr_thread=5)
+        Tcp_server_handler.__init__(self, HTTP_connection)
+        ThreadMananger.__init__(self, nbr_thread=5)
         self.route = []
 
     @threadedFunction()
-    def execute_request(self,socket_handler,request):
-        handler,args,kwargs = self.get_route(request.url.path)
+    def execute_request(self, socket_handler, request):
+        handler, args, kwargs = self.get_route(request.header.url.path)
         if handler is not None:
-            handler(self,socket_handler,request,args,kwargs)
+            handler(self, socket_handler, request, args, kwargs)
         else:
-            response = http_tools.Response()
+            response = http_tools.HTTPResponse()
             response.code = 404
-            response.set_data("")
             socket_handler.send(str(response).encode()+b"")
 
-    def get_route(self,path):
-        for regpath,handler,args,kwargs in self.route:
-            m = re.fullmatch(regpath,path)
+    def get_route(self, path):
+        for regpath, handler, args, kwargs in self.route:
+            m = re.fullmatch(regpath, path)
             if m is not None:
-                for i in range(0,len(m.groups())):
+                for i in range(0, len(m.groups())):
                     args = list(args)
-                    args.insert(i,m.groups()[i])
+                    args.insert(i, m.groups()[i])
                     args = tuple(args)
-                return (handler,args,kwargs)
-        return (None,None,None)
+                return handler, args, kwargs
+        return None, None, None
 
-    def add_route(self,regpath,handler,*args,**kwargs):
-        self.route.append((regpath,handler,args,kwargs))
+    def add_route(self, regpath, handler, *args, **kwargs):
+        self.route.append((regpath, handler, args, kwargs))

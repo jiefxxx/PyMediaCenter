@@ -1,13 +1,34 @@
 import http
+import io
 import re
+import time
 from urllib.parse import urlparse, parse_qsl
 
-STATE_NO_DATA = 0
-STATE_DATA    = 1
-STATE_HEADER  = 2
-STATE_COMPLET = 3
 
-class Url():
+def http_code_to_string(code):
+    for el in http.HTTPStatus:
+        if el.value == code:
+            return el.phrase
+    return ""
+
+
+def http_parse_query(line):
+    match = re.match(r"(.*) (.*) (.*)", line.decode())
+    if match is not None:
+        return match.group(1), match.group(2), match.group(3)
+    else:
+        raise Exception("Invalid Request", str(line))
+
+
+def http_parse_field(line):
+    match = re.match(r"(.*): (.*)", line.decode())
+    if match is not None:
+        return match.group(1), match.group(2)
+    else:
+        raise Exception("Invalid format field:", str(line))
+
+
+class Url:
     def __init__(self, full_path):
         self.full = full_path
         self._parsed = urlparse(full_path)
@@ -15,128 +36,137 @@ class Url():
         self.query = parse_qsl(self._parsed.query)
 
     def __str__(self):
-        return "Url( path: '"+str(self.path)+"', query: "+str(self.query)+" )"
+        return self.full
 
-class Http_proto():
+
+class HTTPFields:
     def __init__(self):
         self.fields = []
-        self.data = b''
 
-    def get_field(self,name,default=None):
-        for field_name,field_value in self.fields:
+    def get(self, name, default=None):
+        for field_name, field_value in self.fields:
             if field_name == name:
                 return field_value
         return default
 
-    def set_field(self,name,data):
+    def set(self, name, value):
+        self.fields.append((name, value))
+
+    def append(self, value):
+        self.fields.append(value)
+
+    def __str__(self):
+        ret = ""
         for field in self.fields:
-            if field[0] == name:
-                self.fields.remove(field)
-        field = (name,data)
-        self.fields.append(field)
-
-    def set_data(self,data,content_type="text/text"):
-        self.set_field("Content-type",content_type)
-        if(type(data) is str):
-            self.data = data.encode()
-        elif(type(data) is bytes):
-            self.data = data
-        self.set_field("Content-length",str(len(self.data)))
+            ret += field[0] + ": " + str(field[1]) + "\r\n"
+        return ret
 
 
-class Request(Http_proto):
+class HTTPHeader:
     def __init__(self):
-        Http_proto.__init__(self)
-        self.methode = None
         self.url = None
         self.query = None
         self.protocol = None
+        self.fields = HTTPFields()
 
-        self.state = 0
-
-        self.data_length = 0
-
-    def feed(self,data):
-        while len(data)>0:
-            if self.state == STATE_NO_DATA:
-                data = self._feed_no_data(data)
-            elif self.state == STATE_HEADER:
-                data = self._feed_request(data)
-            elif self.state == STATE_DATA:
-                data = self._feed_data(data)
-            elif self.state == STATE_COMPLET:
-                return data
-        return data
-
-    def _feed_no_data(self, data):
-        line, data = data.split(b'\r\n',1)
-        match = re.match(r"(.*) (.*) (.*)", line.decode())
-        if(match is not None):
-            self.methode = match.group(1)
-            self.url = Url(match.group(2))
-            self.protocol = match.group(3)
-            self.state = STATE_HEADER
+    def parse_line(self, line):
+        if self.query is None:
+            self.query, url, self.protocol = http_parse_query(line)
+            self.url = Url(url)
         else:
-            raise Exception("Invalid Request",str(line))
-        return data
-
-    def _feed_request(self,data):
-        line, data = data.split(b'\r\n',1)
-        if len(line)==0:
-            self.state = STATE_DATA
-            self._check_header()
-        else:
-            match = re.match(r"(.*): (.*)", line.decode())
-            if(match is not None):
-                self.fields.append((match.group(1), match.group(2)))
-            else:
-                raise Exception("Invalid format field:", str(line))
-        return data
-
-    def _feed_data(self,data):
-        if len(data) > self.data_length-len(self.data):
-            self.data += data[:self.data_length-len(self.data)]
-            self.state = STATE_COMPLET
-            return data[self.data_length-len(self.data):]
-        else:
-            self.data += data
-            return b''
-
-    def _check_header(self):
-        data_length = int(self.get_field("Content-Length", default='0'))
-        if data_length == 0:
-            self.state = STATE_COMPLET
-
-    def completed(self):
-        if self.state == STATE_COMPLET:
-            return True
-        return False
+            self.fields.append(http_parse_field(line))
 
     def __str__(self):
-        ret = str(self.methode)+" "+str(self.url)+" "+str(self.protocol)+"\r\n"
-        for field in self.fields:
-            ret += field[0]+": "+field[1]+"\r\n"
+        ret = str(self.query)+" "+str(self.url)+" "+str(self.protocol)+"\r\n"
+        ret += str(self.fields)
         ret += "\r\n"
         return ret
 
-class Response(Http_proto):
-    def __init__(self):
-        Http_proto.__init__(self)
-        self.proto = "HTTP/1.1"
-        self.code = 404
-        self.set_field("Server","Python-test/0.02")
-        self.set_field("Content-length",'0')
-        self.set_field("Content-type","text/text")
 
-    def code_to_string(self,code):
-        for el in http.HTTPStatus:
-            if el.value == code:
-                return el.phrase
-        return ""
+class HTTPData:
+    def __init__(self, size):
+        self.size = size
+        self.current_size = 0
+        if self.size > 100 * 1024:
+            self.data_stream_type = "file"
+            self.data_stream = open("/tmp/python_http." + str(time.time()) + ".tmp", "wb")
+        else:
+            self.data_stream_type = "memory"
+            self.data_stream = io.BytesIO()
 
     def __str__(self):
-        ret = self.proto+" "+str(self.code)+" "+self.code_to_string(self.code)+"\r\n"
-        for field in self.fields:
-            ret += field[0]+": "+str(field[1])+"\r\n"
+        return "HTTPData(size=" + str(self.size) + ", data_stream=" + \
+               self.data_stream_type + ", completed=" + str(self.completed())
+
+    def completed(self):
+        return self.current_size == self.size
+
+    def feed(self, data):
+        if not self.current_size == self.size:
+            split_index = self.size - self.current_size
+            if len(data) > split_index:
+                self.current_size += len(data[:split_index])
+                self.write(data[:split_index])
+                ret = data[split_index:]
+            else:
+                self.current_size += len(data)
+                self.write(data)
+                ret = []
+
+            if self.completed():
+                self.data_stream.seek(0)
+
+            return ret
+        return data
+
+    def write(self, data):
+        self.data_stream.write(data)
+
+    def read(self, size=-1):
+        return self.data_stream.read(size)
+
+
+class HTTPRequest:
+    def __init__(self):
+        self.header = HTTPHeader()
+        self.data = None
+        self.header_completed = False
+
+    def feed(self, data):
+        while b'\r\n' in data and not self.header_completed:
+            line, data = data.split(b'\r\n', 1)
+            if len(line) == 0:
+                self.on_header_completed()
+                self.header_completed = True
+            else:
+                self.header.parse_line(line)
+
+        if self.header_completed and self.data is not None and not self.data.completed():
+            data = self.data.feed(data)
+
+        return data
+
+    def completed(self):
+        if self.header_completed:
+            if self.data is None or self.data.completed():
+                return True
+        return False
+
+    def on_header_completed(self):
+        data_length = int(self.header.fields.get("Content-Length", default='0'))
+        if data_length > 0:
+            self.data = HTTPData(data_length)
+
+
+class HTTPResponse:
+    def __init__(self):
+        self.proto = "HTTP/1.1"
+        self.code = 404
+        self.fields = HTTPFields()
+        self.fields.set("Server", "Python-test/0.02")
+
+    def __str__(self):
+        ret = self.proto+" "+str(self.code)+" "+http_code_to_string(self.code)+"\r\n"
+        ret += str(self.fields)
         ret += "\r\n"
         return ret
