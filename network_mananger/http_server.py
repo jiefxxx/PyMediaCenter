@@ -56,14 +56,11 @@ class HTTP_handler():
     def send_text(self, code, data=None, content_type="text/text"):
         self.response.code = code
         if data is not None:
-            if type(data)is str:
-                data = data.encode()
             self.response.fields.set("Content-Length", str(len(data)))
             self.response.fields.set("Content-type", content_type)
         else:
-            data = b''
-
-        self.connection.send(str(self.response).encode()+data)
+            data = ''
+        self.connection.send(str(self.response).encode()+data.encode())
 
     def send_json(self, code, data={}):
         dump = json.dumps(data, sort_keys=True, indent=4)
@@ -127,7 +124,7 @@ class HTTP_connection(Tcp_handler):
         self.prev_data = b""
         self.dead = False
 
-    def on_data(self,socket,data):
+    def on_data(self, socket, data):
         if self.current_Request is None:
             self.current_Request = http_tools.HTTPRequest()
         self.prev_data = self.current_Request.feed(self.prev_data+data)
@@ -156,7 +153,9 @@ class HTTP_server(Tcp_server_handler, ThreadMananger):
         else:
             response = http_tools.HTTPResponse()
             response.code = 404
+            response.fields.set("Content-Length", str(0))
             socket_handler.send(str(response).encode()+b"")
+        request.close()
 
     def get_route(self, path):
         for regpath, handler, args, kwargs in self.route:

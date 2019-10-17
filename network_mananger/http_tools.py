@@ -1,5 +1,6 @@
 import http
 import io
+import os
 import re
 import time
 from urllib.parse import urlparse, parse_qsl
@@ -94,6 +95,14 @@ class HTTPData:
             self.data_stream_type = "memory"
             self.data_stream = io.BytesIO()
 
+    def close(self):
+        if self.data_stream_type == "file":
+            name = self.data_stream.name
+            self.data_stream.close()
+            os.remove(name)
+        else:
+            self.data_stream.close()
+
     def __str__(self):
         return "HTTPData(size=" + str(self.size) + ", data_stream=" + \
                self.data_stream_type + ", completed=" + str(self.completed())
@@ -156,6 +165,10 @@ class HTTPRequest:
         data_length = int(self.header.fields.get("Content-Length", default='0'))
         if data_length > 0:
             self.data = HTTPData(data_length)
+
+    def close(self):
+        if self.data:
+            self.data.close()
 
 
 class HTTPResponse:
