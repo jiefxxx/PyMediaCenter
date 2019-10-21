@@ -164,6 +164,9 @@ class HTTPData(HTTPDataAbstract):
     def read(self, size=-1):
         return self.data_stream.read(size)
 
+    def seek(self, n=0):
+        self.data_stream.seek(n)
+
     def json(self):
         return json.loads(self.read())
 
