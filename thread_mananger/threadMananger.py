@@ -165,10 +165,13 @@ class ThreadReturn():
                 value = None
             self.gen_queue.put(value)
 
-    def set_error(self,error):
+    def set_error(self, error):
         self.error = error
         self.completed = True
-        self.completeEvent.notify_all()
+        try:
+            self.completeEvent.notify_all()
+        except RuntimeError:
+            pass
 
     def _get_generator(self):
         while True:

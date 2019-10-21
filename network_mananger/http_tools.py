@@ -128,14 +128,17 @@ class HTTPDataAbstract:
 
 
 class HTTPData(HTTPDataAbstract):
-    def __init__(self, size, content_type=None):
+    def __init__(self, size, boundary=None):
         HTTPDataAbstract.__init__(self, size)
 
-        self.content_type = content_type
+        self.boundary = boundary
+        self.multipart = False
+        if self.boundary:
+            self.multipart = True
 
         if self.size > 100 * 1024:
             self.data_stream_type = "file"
-            self.data_stream = open("/tmp/python_http." + str(time.time()) + ".tmp", "wb")
+            self.data_stream = open("/tmp/python_http." + str(time.time()) + ".tmp", "wb+")
         else:
             self.data_stream_type = "memory"
             self.data_stream = io.BytesIO()
@@ -165,7 +168,13 @@ class HTTPData(HTTPDataAbstract):
         return json.loads(self.read())
 
     def get_multipart(self):
-        return MultipartParser(self.data_stream, self.content_type[1])
+        if self.multipart:
+            return MultipartParser(self.data_stream, self.boundary)
+        else:
+            raise Exception("Not multipart Data")
+
+    def is_multipart(self):
+        return self.multipart
 
 
 class HTTPRequest:
@@ -202,7 +211,7 @@ class HTTPRequest:
 
         if data_length > 0:
             if content_type and content_type[0] == "multipart/form-data" and content_type[1][:9] == "boundary=":
-                self.data = HTTPData(data_length, content_type=(content_type[0], content_type[1][9:]))
+                self.data = HTTPData(data_length, boundary=content_type[1][9:])
             else:
                 self.data = HTTPData(data_length)
 

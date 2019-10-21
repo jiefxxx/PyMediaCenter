@@ -6,7 +6,7 @@ This module provides a parser for the multipart/form-data format. It can read
 from a file, a socket or a WSGI environment. The parser can be used to replace
 cgi.FieldStorage (without the bugs) and works with Python 2.5+ and 3.x (2to3).
 """
-
+import json
 
 __author__ = "Marcel Hellkamp"
 __version__ = "0.2"
@@ -421,6 +421,13 @@ class MultipartPart(object):
             self.file.seek(pos)
 
         return val
+
+    def json(self):
+        pos = self.file.tell()
+        self.file.seek(0)
+        ret = json.load(self.file)
+        self.file.seek(pos)
+        return ret
 
     def save_as(self, path):
         fp = open(path, "wb")
