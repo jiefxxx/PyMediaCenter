@@ -1,3 +1,4 @@
+import email.parser
 import http
 import io
 import json
@@ -5,6 +6,8 @@ import os
 import re
 import time
 from urllib.parse import urlparse, parse_qsl
+
+from network_mananger.multipart import MultipartParser
 
 
 def http_code_to_string(code):
@@ -79,16 +82,57 @@ class HTTPHeader:
             self.fields.append(http_parse_field(line))
 
     def __str__(self):
-        ret = str(self.query)+" "+str(self.url)+" "+str(self.protocol)+"\r\n"
+        ret = str(self.query) + " " + str(self.url) + " " + str(self.protocol) + "\r\n"
         ret += str(self.fields)
         ret += "\r\n"
         return ret
 
 
-class HTTPData:
+class HTTPDataAbstract:
     def __init__(self, size):
         self.size = size
         self.current_size = 0
+
+    def completed(self):
+        return self.current_size == self.size
+
+    def feed(self, data):
+        if not self.current_size == self.size:
+            split_index = self.size - self.current_size
+            if len(data) > split_index:
+                self.current_size += len(data[:split_index])
+                self.write(data[:split_index])
+                ret = data[split_index:]
+            else:
+                self.current_size += len(data)
+                self.write(data)
+                ret = b""
+
+            if self.completed():
+                self.on_completed()
+
+            return ret
+        return data
+
+    def close(self):
+        pass
+
+    def on_completed(self):
+        pass
+
+    def write(self, data):
+        pass
+
+    def read(self, n=-1):
+        return None
+
+
+class HTTPData(HTTPDataAbstract):
+    def __init__(self, size, content_type=None):
+        HTTPDataAbstract.__init__(self, size)
+
+        self.content_type = content_type
+
         if self.size > 100 * 1024:
             self.data_stream_type = "file"
             self.data_stream = open("/tmp/python_http." + str(time.time()) + ".tmp", "wb")
@@ -108,26 +152,8 @@ class HTTPData:
         return "HTTPData(size=" + str(self.size) + ", data_stream=" + \
                self.data_stream_type + ", completed=" + str(self.completed())
 
-    def completed(self):
-        return self.current_size == self.size
-
-    def feed(self, data):
-        if not self.current_size == self.size:
-            split_index = self.size - self.current_size
-            if len(data) > split_index:
-                self.current_size += len(data[:split_index])
-                self.write(data[:split_index])
-                ret = data[split_index:]
-            else:
-                self.current_size += len(data)
-                self.write(data)
-                ret = b""
-
-            if self.completed():
-                self.data_stream.seek(0)
-
-            return ret
-        return data
+    def on_completed(self):
+        self.data_stream.seek(0)
 
     def write(self, data):
         self.data_stream.write(data)
@@ -137,6 +163,9 @@ class HTTPData:
 
     def json(self):
         return json.loads(self.read())
+
+    def get_multipart(self):
+        return MultipartParser(self.data_stream, self.content_type[1])
 
 
 class HTTPRequest:
@@ -167,8 +196,15 @@ class HTTPRequest:
 
     def on_header_completed(self):
         data_length = int(self.header.fields.get("Content-Length", default='0'))
+        content_type = self.header.fields.get("Content-Type", default=None)
+        if content_type:
+            content_type = content_type.split('; ', 1)
+
         if data_length > 0:
-            self.data = HTTPData(data_length)
+            if content_type and content_type[0] == "multipart/form-data" and content_type[1][:9] == "boundary=":
+                self.data = HTTPData(data_length, content_type=(content_type[0], content_type[1][9:]))
+            else:
+                self.data = HTTPData(data_length)
 
     def close(self):
         if self.data:
@@ -183,7 +219,7 @@ class HTTPResponse:
         self.fields.set("Server", "Python-test/0.02")
 
     def __str__(self):
-        ret = self.proto+" "+str(self.code)+" "+http_code_to_string(self.code)+"\r\n"
+        ret = self.proto + " " + str(self.code) + " " + http_code_to_string(self.code) + "\r\n"
         ret += str(self.fields)
         ret += "\r\n"
         return ret
