@@ -7,9 +7,11 @@ import requests
 from PyQt5.QtCore import Qt, QSize
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QApplication, QMainWindow, QStackedWidget
-from qt_gui.mediaplayer import MediaPlayer
-from qt_gui.movies import Movies
-from thread_mananger.threadMananger import ThreadMananger, threadedFunction
+
+from mediaCenter_lib.qt_gui.mediaplayer import MediaPlayer
+from mediaCenter_lib.qt_gui.movies import Movies
+
+from pythread.threadMananger import ThreadMananger, threadedFunction
 
 
 class MainWindow(QMainWindow):

@@ -1,4 +1,4 @@
-from thread_mananger.threadMananger import ThreadMananger
+from pythread.threadMananger import ThreadMananger
 
 
 class Scripts(ThreadMananger):

@@ -7,7 +7,7 @@ import re
 import time
 from urllib.parse import urlparse, parse_qsl
 
-from network_mananger.multipart import MultipartParser
+from pynet.multipart import MultipartParser
 
 
 def sql_where_from_url(url):

@@ -4,9 +4,9 @@ import time
 import magic
 import json
 
-from network_mananger import http_tools
-from network_mananger.network import Tcp_handler, Tcp_server_handler
-from thread_mananger.threadMananger import ThreadMananger, threadedFunction
+from pynet import http_tools
+from pynet.network import Tcp_handler, Tcp_server_handler
+from pythread.threadMananger import ThreadMananger, threadedFunction
 
 
 def chunk(path, seek, size=1024*5):

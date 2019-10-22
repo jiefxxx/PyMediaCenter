@@ -5,7 +5,7 @@ from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.QtWidgets import QListView, QWidget, QHBoxLayout, QVBoxLayout, \
     QLineEdit, QComboBox, QCheckBox
 
-from qt_gui.widget import QIconButton
+from mediaCenter_lib.qt_gui.widget import QIconButton
 
 
 class Movies(QWidget):

@@ -1,5 +1,5 @@
 import sqlite3
-from thread_mananger.threadMananger import ThreadMananger, threadedFunction, sequesterFunction
+from pythread.threadMananger import ThreadMananger, threadedFunction, sequesterFunction
 
 
 def dict_filter(old_dict, keys):

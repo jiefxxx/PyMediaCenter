@@ -1,7 +1,7 @@
 import sys
 import time
 
-from qt_gui.widget import QIconButton, QJumpSlider
+from mediaCenter_lib.qt_gui.widget import QIconButton, QJumpSlider
 
 from PyQt5.QtCore import Qt, QTimer, QSize, QRect, QPoint
 from PyQt5.QtGui import QPalette, QColor, QPainter
