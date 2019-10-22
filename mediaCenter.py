@@ -7,7 +7,6 @@ import requests
 from PyQt5.QtCore import Qt, QSize
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QApplication, QMainWindow, QStackedWidget
-
 from qt_gui.mediaplayer import MediaPlayer
 from qt_gui.movies import Movies
 from thread_mananger.threadMananger import ThreadMananger, threadedFunction
@@ -36,8 +35,8 @@ class MainWindow(QMainWindow):
         self.wasMaximized = False
 
     def test(self, movie):
-        print("http://192.168.1.55:4242/video/" + str(movie["video_id"]) + "/")
-        self.media_player.load("http://192.168.1.55:4242/video/" + str(movie["video_id"]) + "/")
+        print("http://192.168.1.55:4242/video/" + str(movie["video_id"]) + "/stream")
+        self.media_player.load("http://192.168.1.55:4242/video/" + str(movie["video_id"]) + "/stream")
         self.stack.setCurrentWidget(self.media_player)
         print(movie)
 

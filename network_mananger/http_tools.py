@@ -10,6 +10,15 @@ from urllib.parse import urlparse, parse_qsl
 from network_mananger.multipart import MultipartParser
 
 
+def sql_where_from_url(url):
+    where = {}
+    for query in url.query:
+        if query[1] == 'null':
+            where[query[0]] = None
+        else:
+            where[query[0]] = query[1]
+    return where
+
 def http_code_to_string(code):
     for el in http.HTTPStatus:
         if el.value == code:

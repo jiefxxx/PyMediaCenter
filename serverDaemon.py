@@ -2,6 +2,7 @@ from database_mananger import DataBase
 from db_description import MEDIA_TYPE_MOVIE, MEDIA_TYPE_TV, MEDIA_TYPE_UNKNOWN, database_description
 from videos_info import get_genres, get_videos, get_video_info, SearchMovie
 from network_mananger.http_server import HTTP_server, HTTP_handler
+from network_mananger.http_tools import sql_where_from_url
 from network_mananger.network import MainServer, init_serverSock
 from config import ConfigMananger
 from thread_mananger.scriptMananger import Scripts
@@ -81,43 +82,53 @@ class DBUpdateScripts(Scripts):
 
 class ScriptHandler(HTTP_handler):
     def GET(self, url, script_name, script, db, cm):
+        if script_name is None:
+            return self.send_error(404)
+
         if script_name == "state":
-            self.send_json(200, script.get_state())
-        else:
-            if script.start_script(script_name, db, cm):
-                self.send_text(200, "ok")
-            else:
-                self.send_error(404)
+            return self.send_json(200, script.get_state())
+
+        if script.start_script(script_name, db, cm):
+            return self.send_text(200, "ok")
+
+        return self.send_error(404)
 
 
 class MovieHandler(HTTP_handler):
-    def GET(self, url, db, cm):
-        send = []
+
+    def GET(self, url, movie_id, db, cm):
+        genre_dict = self._create_genre_dict(db.get("genres"))
+
+        if movie_id is None:
+            return self.send_json(200, self._adding_genre(genre_dict, list(db.get("movies",
+                                        columns=["video_id", "title", "genre_ids", "original_title", "duration",
+                                                 "release_date", "vote_average", "poster_path", "id"],
+                                        where=sql_where_from_url(url)))))
+
+        movies = self._adding_genre(genre_dict, list(db.get("movies", where={'id': int(movie_id)})))
+
+        if len(movies) > 0:
+            return self.send_json(200, movies)
+
+        return self.send_error(404)
+
+    @staticmethod
+    def _create_genre_dict(genres):
         genre_dict = {}
-        for genre in db.get("genres"):
+        for genre in genres:
             genre_dict[genre["id"]] = genre["name"]
-        for movie in list(db.get("movies", columns=["video_id", "title", "genre_ids", "original_title",
-                                                    "duration", "release_date", "vote_average", "poster_path"])):
+        return genre_dict
+
+    @staticmethod
+    def _adding_genre(genre_dict, movies):
+        ret = []
+        for movie in movies:
             movie["genres"] = []
             for genre_id in movie["genre_ids"]:
                 movie["genres"].append(genre_dict[genre_id])
             del movie["genre_ids"]
-            send.append(movie)
-        self.send_json(200, send)
-
-
-class VideosHandler(HTTP_handler):
-    def GET(self, url, db, cm):
-        send = []
-        where = {}
-        for query in url.query:
-            if query[1] == 'null':
-                where[query[0]] = None
-            else:
-                where[query[0]] = query[1]
-        for video in list(db.get("videos", where=where)):
-            send.append(video)
-        self.send_json(200, send)
+            ret.append(movie)
+        return ret
 
 
 class GenreHandler(HTTP_handler):
@@ -127,22 +138,21 @@ class GenreHandler(HTTP_handler):
 
 class VideoHandler(HTTP_handler):
     def GET(self, url, video_id, action, db, cm):
+        if video_id is None:
+            return self.send_json(200, list(db.get("videos", where=sql_where_from_url(url))))
+
         videos = list(db.get("videos", where={'video_id': int(video_id)}))
-        print(videos, video_id)
-        if len(videos) > 0:
-            video = videos[0]
-            if action == "":
-                try:
-                    self.send_file(video["path"])
-                except FileNotFoundError:
-                    print("file not found")
-                    self.send_error(404)
-            elif action == "data":
-                self.send_json(200, video)
-            else:
-                self.send_error(404)
-        else:
-            self.send_error(404)
+
+        if action is None and len(videos) > 0:
+            return self.send_json(200, videos[0])
+
+        if action == "stream":
+            try:
+                return self.send_file(videos[0]["path"])
+            except FileNotFoundError:
+                print("file not found")
+
+        return self.send_error(404)
 
 
 if len(sys.argv) > 1:
@@ -168,11 +178,10 @@ database_scripts = DBUpdateScripts()
 ms = MainServer()
 
 http_server = HTTP_server()
-http_server.add_route("/movie", MovieHandler, database, config)
-http_server.add_route("/video", VideosHandler, database, config)
+http_server.add_route("/movie/?([^/]*)/?", MovieHandler, database, config)
 http_server.add_route("/genre", GenreHandler, database, config)
-http_server.add_route("/video/(.*)/(.*)", VideoHandler, database, config)
-http_server.add_route("/scripts/(.*)", ScriptHandler, database_scripts, database, config)
+http_server.add_route("/video/?([^/]*)/?([^/]*)", VideoHandler, database, config)
+http_server.add_route("/scripts/?([^/]*)", ScriptHandler, database_scripts, database, config)
 
 ms.add_socket(init_serverSock(4242), http_server)
 

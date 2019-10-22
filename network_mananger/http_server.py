@@ -81,6 +81,7 @@ class HTTP_handler():
         return self.connection.send(data, chunk_size=0)
 
     def send_error(self, code):
+        self.response.fields.set("Content-Length", str(0))
         self.send_header(code)
         self.send_data("")
 
@@ -168,7 +169,10 @@ class HTTP_server(Tcp_server_handler, ThreadMananger):
             if m is not None:
                 for i in range(0, len(m.groups())):
                     args = list(args)
-                    args.insert(i, m.groups()[i])
+                    value = m.groups()[i]
+                    if len(value) == 0:
+                        value = None
+                    args.insert(i, value)
                     args = tuple(args)
                 return handler, args, kwargs
         return None, None, None
