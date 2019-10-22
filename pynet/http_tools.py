@@ -10,15 +10,6 @@ from urllib.parse import urlparse, parse_qsl
 from pynet.multipart import MultipartParser
 
 
-def sql_where_from_url(url):
-    where = {}
-    for query in url.query:
-        if query[1] == 'null':
-            where[query[0]] = None
-        else:
-            where[query[0]] = query[1]
-    return where
-
 def http_code_to_string(code):
     for el in http.HTTPStatus:
         if el.value == code:
@@ -48,6 +39,23 @@ class Url:
         self._parsed = urlparse(full_path)
         self.path = self._parsed.path
         self.query = parse_qsl(self._parsed.query)
+
+    def get(self, key, default=None):
+        for query in self.query:
+            if query[0] == key:
+                return query[1]
+        return default
+
+    def to_sql_where(self, blacklist=None):
+        if blacklist is None: blacklist = []
+        where = {}
+        for query in self.query:
+            if query[0] not in blacklist:
+                where[query[0]] = query[1]
+                if query[1] == 'null':
+                    where[query[0]] = None
+
+        return where
 
     def __str__(self):
         return self.full

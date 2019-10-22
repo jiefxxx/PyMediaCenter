@@ -9,7 +9,7 @@ User=testing
 Group=testing
 UMask=007
 
-ExecStart=/usr/bin/python3 /home/testing/python-mediaMananger/serverDaemon.py /home/testing/python-mediaMananger/server.json > /home/testing/log
+ExecStart=/usr/bin/python3 /home/testing/python-mediaMananger/daemon.py /home/testing/python-mediaMananger/server.json > /home/testing/log
 
 Restart=on-failure
 

@@ -6,12 +6,13 @@ class MovieHandler(HTTP_handler):
 
     def GET(self, url, movie_id, db, cm):
         genre_dict = self._create_genre_dict(db.get("genres"))
-
+        columns = url.get("columns")
+        if columns is not None:
+            columns = columns.split(",")
         if movie_id is None:
             return self.send_json(200, self._adding_genre(genre_dict, list(db.get("movies",
-                                        columns=["video_id", "title", "genre_ids", "original_title", "duration",
-                                                 "release_date", "vote_average", "poster_path", "id"],
-                                        where=sql_where_from_url(url)))))
+                                        columns=columns,
+                                        where=url.to_sql_where(blacklist=["columns"])))))
 
         movies = self._adding_genre(genre_dict, list(db.get("movies", where={'id': int(movie_id)})))
 
@@ -31,10 +32,11 @@ class MovieHandler(HTTP_handler):
     def _adding_genre(genre_dict, movies):
         ret = []
         for movie in movies:
-            movie["genres"] = []
-            for genre_id in movie["genre_ids"]:
-                movie["genres"].append(genre_dict[genre_id])
-            del movie["genre_ids"]
+            if "genre_ids" in movie:
+                movie["genres"] = []
+                for genre_id in movie["genre_ids"]:
+                    movie["genres"].append(genre_dict[genre_id])
+                del movie["genre_ids"]
             ret.append(movie)
         return ret
 
@@ -46,18 +48,27 @@ class GenreHandler(HTTP_handler):
 
 class VideoHandler(HTTP_handler):
     def GET(self, url, video_id, action, db, cm):
+
+        columns = url.get("columns")
+        if columns is not None:
+            columns = columns.split(",")
+
         if video_id is None:
-            return self.send_json(200, list(db.get("videos", where=sql_where_from_url(url))))
+            return self.send_json(200, list(db.get("videos", columns=columns,
+                                        where=url.to_sql_where(blacklist=["columns"]))))
+        else:
+            videos = list(db.get("videos", columns=columns, where={'video_id': int(video_id)}))
 
-        videos = list(db.get("videos", where={'video_id': int(video_id)}))
+        if len(videos) == 0:
+            return self.send_error(404)
 
-        if action is None and len(videos) > 0:
+        if action is None:
             return self.send_json(200, videos[0])
 
         if action == "stream":
             try:
                 return self.send_file(videos[0]["path"])
             except FileNotFoundError:
-                print("file not found")
+                pass
 
         return self.send_error(404)

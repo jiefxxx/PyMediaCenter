@@ -101,7 +101,8 @@ class Root(ThreadMananger):
 
     @threadedFunction(0)
     def get_movies(self, signal):
-        response = requests.get('http://192.168.1.55:4242/movie')
+        response = requests.get('http://192.168.1.55:4242/movie?columns=video_id,title,genre_ids,original_title,'
+                                'duration,release_date,vote_average,poster_path')
         if response.status_code == 200:
             data = response.json()
             signal.emit(data)
