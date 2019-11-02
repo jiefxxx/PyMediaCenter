@@ -1,7 +1,10 @@
 #! python3
 
+import tmdbsimple as tmdb
+
+
 from daemon_lib.db_scripts import DBUpdateScripts, ScriptHandler
-from daemon_lib.http_handlers import MovieHandler, GenreHandler, VideoHandler
+from daemon_lib.http_handlers import MovieHandler, GenreHandler, VideoHandler, UploadHandler
 from daemon_lib.db_description import database_description
 
 from common_lib.config import ConfigMananger
@@ -9,11 +12,10 @@ from common_lib.config import ConfigMananger
 
 from pydbm import DataBase
 
-from pynet.http_server import HTTP_server
+from pynet.http_server import HTTP_server, HTTP_handler
 from pynet.network import MainServer, init_serverSock
 
 import sys
-
 
 if len(sys.argv) > 1:
     config_path = sys.argv[1]
@@ -35,6 +37,9 @@ database = DataBase(config.get("database.path"))
 database.create(database_description)
 database_scripts = DBUpdateScripts()
 
+tmdb.API_KEY = config.get("tmdb.api_key")
+
+
 ms = MainServer()
 
 http_server = HTTP_server()
@@ -42,6 +47,7 @@ http_server.add_route("/movie/?([^/]*)/?", MovieHandler, database, config)
 http_server.add_route("/genre", GenreHandler, database, config)
 http_server.add_route("/video/?([^/]*)/?([^/]*)", VideoHandler, database, config)
 http_server.add_route("/scripts/?([^/]*)", ScriptHandler, database_scripts, database, config)
+http_server.add_route("/upload/?", UploadHandler, database, config)
 
 ms.add_socket(init_serverSock(4242), http_server)
 

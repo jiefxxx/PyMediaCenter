@@ -21,11 +21,6 @@ def movie_after_db(row):
     row["genre_ids"] = ret
     return row
 
-
-MEDIA_TYPE_UNKNOWN = 0
-MEDIA_TYPE_MOVIE = 1
-MEDIA_TYPE_TV = 2
-
 video_table = {
     "name": "videos",
     "attrs": {"video_id":       "INTEGER PRIMARY KEY AUTOINCREMENT",

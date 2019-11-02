@@ -1,7 +1,7 @@
 import sys
 import time
 
-from mediaCenter_lib.qt_gui.widget import QIconButton, QJumpSlider
+from mediaCenter_lib.gui.widget import QIconButton, QJumpSlider
 
 from PyQt5.QtCore import Qt, QTimer, QSize, QRect, QPoint
 from PyQt5.QtGui import QPalette, QColor, QPainter
@@ -75,11 +75,11 @@ class MediaPlayer(QWidget):
     def stop(self):
         self.media_player.stop()
         self.is_playing = False
-        self.parent().parent().full_screen(False)
-        self.parent().parent().switch_back()
+        self.window().full_screen(False)
+        self.window().on_close_player()
 
     def toggle_full_screen(self):
-        self.parent().parent().full_screen()
+        self.window().full_screen()
 
     def move_position(self, position):
         self.media_player.set_position(position / 1000.0)

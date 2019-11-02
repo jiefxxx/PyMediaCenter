@@ -1,4 +1,4 @@
-from daemon_lib.db_description import MEDIA_TYPE_MOVIE, MEDIA_TYPE_TV, MEDIA_TYPE_UNKNOWN
+from common_lib.config import MEDIA_TYPE_UNKNOWN, MEDIA_TYPE_MOVIE, MEDIA_TYPE_TV
 from pynet.http_server import HTTP_handler
 from pythread.scriptMananger import Scripts
 from common_lib.videos_info import SearchMovie, get_video_info, get_videos, get_genres

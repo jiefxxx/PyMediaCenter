@@ -6,10 +6,11 @@ from pathlib import Path
 import requests
 from PyQt5.QtCore import Qt, QSize
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtWidgets import QApplication, QMainWindow, QStackedWidget
+from PyQt5.QtWidgets import QApplication, QMainWindow, QStackedWidget, QWidget, QTabWidget
 
-from mediaCenter_lib.qt_gui.mediaplayer import MediaPlayer
-from mediaCenter_lib.qt_gui.movies import Movies
+from mediaCenter_lib.gui.mediaplayer import MediaPlayer
+from mediaCenter_lib.gui.movies import Movies
+from mediaCenter_lib.gui.upload_box import UploadBox
 
 from pythread.threadMananger import ThreadMananger, threadedFunction
 
@@ -24,13 +25,20 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("PMC - PyMediaCenter")
 
         self.movies = Movies(self, callback=self.test)
+        self.upload = UploadBox(self)
         self.media_player = MediaPlayer(self)
+
+        self.tab = QTabWidget(self)
+
+        self.tab.root = self.root
+        self.tab.addTab(self.movies, "Films")
+        self.tab.addTab(self.upload, "Uploads")
 
         self.stack = QStackedWidget(self)
         self.stack.root = self.root
-        self.stack.addWidget(self.movies)
+
+        self.stack.addWidget(self.tab)
         self.stack.addWidget(self.media_player)
-        self.stack.setMouseTracking(True)
 
         self.setCentralWidget(self.stack)
 
@@ -42,8 +50,8 @@ class MainWindow(QMainWindow):
         self.stack.setCurrentWidget(self.media_player)
         print(movie)
 
-    def switch_back(self):
-        self.stack.setCurrentWidget(self.movies)
+    def on_close_player(self):
+        self.stack.setCurrentWidget(self.tab)
 
     def full_screen(self, bool=None):
         if self.isFullScreen():

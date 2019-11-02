@@ -1,7 +1,17 @@
 import os
 import tmdbsimple as tmdb
 import magic
+from alphabet_detector import AlphabetDetector
 from pymediainfo import MediaInfo
+
+
+def check_for_space(path, size):
+    statvfs = os.statvfs(path)
+    free_bytes = statvfs.f_frsize * statvfs.f_bfree
+    print(size, free_bytes)
+    if size >= free_bytes:
+        return False
+    return True
 
 
 def get_genres(language=None, api_key=None):
@@ -33,6 +43,38 @@ class SearchMovie:
                 elif year is None:
                     yield s
         return None
+
+
+def normalize_filename(name):
+    banished = ('.',)
+    replace = ('\'', ':', ',', ' ', '/')
+    name = name.lower()
+    for item in banished:
+        name = name.replace(item, '')
+    for item in replace:
+        name = name.replace(item, '.')
+
+    return name
+
+
+def get_normalized_title(tmdb_info):
+    if AlphabetDetector().is_latin(tmdb_info["original_title"]):
+        title = tmdb_info["original_title"]
+    else:
+        title = tmdb_info["title"]
+    return normalize_filename(title)
+
+
+def get_normalized_file_name(tmdb_info, ext):
+    name = get_normalized_title(tmdb_info)
+    name += "."+tmdb_info["release_date"][:4]+'.'+ext
+    return name
+
+
+def get_movie_info(_id, language=None):
+    if language is not None:
+        language = language[:2]
+    return tmdb.Movies(_id).info(language=language)
 
 
 def get_video_info(path, media_type):

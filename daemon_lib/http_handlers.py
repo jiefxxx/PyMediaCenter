@@ -1,5 +1,37 @@
+from common_lib.config import MEDIA_TYPE_MOVIE
+from common_lib.videos_info import get_video_info, get_movie_info, get_normalized_file_name, check_for_space
 from pynet.http_server import HTTP_handler
-from pynet.http_tools import sql_where_from_url
+
+
+class UploadHandler(HTTP_handler):
+    def GET(self, url, **kwargs):
+        self.send_text(200, "test ok")
+
+    def POST(self, url, db, cm, **kwargs):
+        multipart_file = self.request.data.get_multipart()
+        json_data = multipart_file.get("data").json()
+        video_data = multipart_file.get("video")
+        video_info = get_video_info(video_data.file.name, json_data["media_type"])
+        video_info["media_id"] = json_data["media_id"]
+        ext = video_data.filename.split('.')[-1]
+        size = video_data.size
+        if video_info["media_type"] == MEDIA_TYPE_MOVIE:
+            base_paths = cm.get("videos.movies.path")
+            movie_info = get_movie_info(video_info["media_id"])
+            filename = get_normalized_file_name(movie_info, ext)
+            for path in base_paths:
+                if check_for_space(path, size):
+                    video_info["path"] = path+"/"+filename
+                    movie_info["genre_ids"] = []
+                    for genre in movie_info["genres"]:
+                        movie_info["genre_ids"].append(genre["id"])
+                    video_data.save_as(video_info["path"])
+                    db.set("videos", video_info)
+                    db.set("movies", movie_info)
+                    self.send_text(200, "ok "+video_info["path"])
+                    return
+
+        self.send_error(400)
 
 
 class MovieHandler(HTTP_handler):

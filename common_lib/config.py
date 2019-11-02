@@ -52,3 +52,8 @@ class ConfigMananger():
 
     def to_json(self):
         return json.dumps(self.root,sort_keys=True, indent=4)
+
+
+MEDIA_TYPE_UNKNOWN = 0
+MEDIA_TYPE_MOVIE = 1
+MEDIA_TYPE_TV = 2

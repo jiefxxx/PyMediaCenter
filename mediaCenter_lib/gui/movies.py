@@ -5,7 +5,7 @@ from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.QtWidgets import QListView, QWidget, QHBoxLayout, QVBoxLayout, \
     QLineEdit, QComboBox, QCheckBox
 
-from mediaCenter_lib.qt_gui.widget import QIconButton
+from mediaCenter_lib.gui.widget import QIconButton
 
 
 class Movies(QWidget):
@@ -173,7 +173,7 @@ class GenresModel(QAbstractListModel):
 
     def refresh(self):
         self.signal.connect(self.on_data)
-        self.parent().root.get_genres(self.signal)
+        self.parent().window().root.get_genres(self.signal)
 
     def on_data(self, data):
         self.beginResetModel()

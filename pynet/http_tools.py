@@ -47,7 +47,8 @@ class Url:
         return default
 
     def to_sql_where(self, blacklist=None):
-        if blacklist is None: blacklist = []
+        if blacklist is None:
+            blacklist = []
         where = {}
         for query in self.query:
             if query[0] not in blacklist:

@@ -141,7 +141,8 @@ class ThreadMananger():
             thread.queue.put(None)
             thread.join()
 
-class ThreadReturn():
+
+class ThreadReturn:
     def __init__(self):
         self.value = None
         self.error = None
