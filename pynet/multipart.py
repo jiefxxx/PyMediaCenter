@@ -199,6 +199,9 @@ class MultipartParser(object):
         self._done = []
         self._part_iter = None
 
+        self.custom_file = None
+        self.custom_name = None
+
     def __iter__(self):
         """ Iterate over the parts of the multipart message. """
         if not self._part_iter:
@@ -215,7 +218,11 @@ class MultipartParser(object):
         """ Returns a list with all parts of the multipart message. """
         return list(self)
 
-    def get(self, name, default=None):
+    def get(self, name, default=None, custom_file=None):
+        self.custom_file = custom_file
+        if self.custom_file:
+            self.custom_name = name
+
         """ Return the first part with that name or a default value (None). """
         for part in self:
             if name == part.name:
@@ -239,6 +246,7 @@ class MultipartParser(object):
 
         while True:
             data = read(maxbuf if maxread < 0 else min(maxbuf, maxread))
+
             maxread -= len(data)
             lines = (buffer + data).splitlines(True)
             len_first_line = len(lines[0])
@@ -290,6 +298,7 @@ class MultipartParser(object):
             "buffer_size": self.buffer_size,
             "memfile_limit": self.memfile_limit,
             "charset": self.charset,
+            "root": self
         }
 
         part = MultipartPart(**opts)
@@ -326,7 +335,7 @@ class MultipartParser(object):
 
 
 class MultipartPart(object):
-    def __init__(self, buffer_size=2 ** 16, memfile_limit=2 ** 18, charset="latin1"):
+    def __init__(self, buffer_size=2 ** 16, memfile_limit=2 ** 18, charset="latin1", root=None):
         self.headerlist = []
         self.headers = None
         self.file = False
@@ -339,6 +348,7 @@ class MultipartPart(object):
         self.charset = charset
         self.memfile_limit = memfile_limit
         self.buffer_size = buffer_size
+        self.root = root
 
     def feed(self, line, nl=""):
         if self.file:
@@ -376,13 +386,13 @@ class MultipartPart(object):
             raise MultipartError("Size of body exceeds Content-Length header.")
 
         if self.size > self.memfile_limit and isinstance(self.file, BytesIO):
-            # TODO: What about non-file uploads that exceed the memfile_limit?
             self.file, old = NamedTemporaryFile(mode="w+b"), self.file
             old.seek(0)
             copy_file(old, self.file, self.size, self.buffer_size)
 
     def finish_header(self):
         self.file = BytesIO()
+
         self.headers = Headers(self.headerlist)
         content_disposition = self.headers.get("Content-Disposition", "")
         content_type = self.headers.get("Content-Type", "")
@@ -396,6 +406,11 @@ class MultipartPart(object):
         self.content_type, options = parse_options_header(content_type)
         self.charset = options.get("charset") or self.charset
         self.content_length = int(self.headers.get("Content-Length", "-1"))
+
+        if self.root.custom_name == self.name and self.root.custom_file is not None:
+            self.file, old = open(self.root.custom_file, "w+b"), self.file
+            old.seek(0)
+            copy_file(old, self.file, self.size, self.buffer_size)
 
     def is_buffered(self):
         """ Return true if the data is fully buffered in memory."""

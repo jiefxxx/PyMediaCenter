@@ -8,7 +8,6 @@ from pymediainfo import MediaInfo
 def check_for_space(path, size):
     statvfs = os.statvfs(path)
     free_bytes = statvfs.f_frsize * statvfs.f_bfree
-    print(size, free_bytes)
     if size >= free_bytes:
         return False
     return True

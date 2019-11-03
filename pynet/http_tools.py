@@ -218,6 +218,12 @@ class HTTPRequest:
 
         return data
 
+    def ready(self):
+        if self.header_completed:
+            if self.data is not None and not self.data.completed():
+                return True
+        return False
+
     def completed(self):
         if self.header_completed:
             if self.data is None or self.data.completed():

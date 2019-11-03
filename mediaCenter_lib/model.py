@@ -70,14 +70,16 @@ class UploadVideoModel(ModelTableListDict, ThreadMananger):
         media_type = video.get("media_type")
         media_id = video.get("id")
         if path and media_type and media_id:
-            send_json = {"data": json.dumps({"media_id": media_id, "media_type": media_type, "testing": True})}
+            send_json = {"data": json.dumps({"media_id": media_id,
+                                             "media_type": media_type,
+                                             "ext": path.split(".")[-1],
+                                             "size": os.path.getsize(path)})}
             files = {'video': open(path, 'rb')}
             self._status(index, "Sending...")
             requests.post("http://192.168.1.55:4242/upload", files=files, data=send_json)
             self._status(index, "Send completed")
         else:
             self._status(index, "Invalid data")
-            # raise Exception("video not ready") Not sur what to doo ///
         self.end_busy()
 
     def __del__(self):

@@ -9,11 +9,11 @@ from pynet.network import Tcp_handler, Tcp_server_handler
 from pythread.threadMananger import ThreadMananger, threadedFunction
 
 
-def chunk(path, seek, size=1024*5):
+def chunk(path, seek, size=1024 * 5):
     with open(path, "rb") as f:
         f.seek(seek)
         ret = f.read(size)
-    return seek+len(ret), ret
+    return seek + len(ret), ret
 
 
 def chunks(path, seek=-1, chunk_size=65500):
@@ -25,6 +25,7 @@ def chunks(path, seek=-1, chunk_size=65500):
             if not data:
                 break
             yield data
+
 
 class HTTP_handler():
     def __init__(self, server, connection, request, args=[], kwargs=[]):
@@ -65,7 +66,7 @@ class HTTP_handler():
             self.response.fields.set("Content-type", content_type)
         else:
             data = ''
-        self.connection.send(str(self.response).encode()+data.encode())
+        self.connection.send(str(self.response).encode() + data.encode())
 
     def send_json(self, code, data={}):
         dump = json.dumps(data, sort_keys=True, indent=4)
@@ -91,13 +92,13 @@ class HTTP_handler():
         seek = 0
         if r is not None:
             seek = int(r.split("=")[1][:-1])
-        seek_end = os.path.getsize(path)-1  # seek end not fully implemented
+        seek_end = os.path.getsize(path) - 1  # seek end not fully implemented
         full_size = os.path.getsize(path)
-        size = seek_end-seek+1
+        size = seek_end - seek + 1
 
         if seek >= 0 and r is not None:
             self.response.fields.set("Accept-Ranges", "bytes")
-            self.response.fields.set("Content-Range", "bytes "+str(seek)+"-"+str(seek_end)+"/"+str(full_size))
+            self.response.fields.set("Content-Range", "bytes " + str(seek) + "-" + str(seek_end) + "/" + str(full_size))
             self.response.fields.set("Content-length", size)
             self.send_header(206)
         else:
@@ -133,7 +134,7 @@ class HTTP_connection(Tcp_handler):
     def on_data(self, socket, data):
         if self.current_Request is None:
             self.current_Request = http_tools.HTTPRequest()
-        self.prev_data = self.current_Request.feed(self.prev_data+data)
+        self.prev_data = self.current_Request.feed(self.prev_data + data)
         if self.current_Request.completed():
             self.server.execute_request(self, self.current_Request)
             self.current_Request = None
@@ -160,7 +161,7 @@ class HTTP_server(Tcp_server_handler, ThreadMananger):
             response = http_tools.HTTPResponse()
             response.code = 404
             response.fields.set("Content-Length", str(0))
-            socket_handler.send(str(response).encode()+b"")
+            socket_handler.send(str(response).encode() + b"")
         request.close()
 
     def get_route(self, path):
