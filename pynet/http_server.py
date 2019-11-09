@@ -2,7 +2,7 @@ import re
 
 import pynet.http_request
 import pynet.http_response
-from pynet.http_handler import HTTP404
+from pynet.http_handler import HTTP404Handler
 from pynet.http_tools import HTTP_CONNECTION_ABORT, HTTP_CONNECTION_CONTINUE, HTTP_CONNECTION_UPGRADE
 from pynet.network import Tcp_handler, Tcp_server_handler
 from pythread.threadMananger import ThreadMananger, threadedFunction
@@ -70,7 +70,8 @@ class HTTPServer(Tcp_server_handler, ThreadMananger):
                     args.append(group)
                 user_data["#regex_data"] = tuple(args)
                 return handler, user_data
-        return HTTP404, {"#regex_data": ()}
+        print(path)
+        return HTTP404Handler, {"#regex_data": ()}
 
     def add_user_data(self, name, value):
         self.user_data[name] = value

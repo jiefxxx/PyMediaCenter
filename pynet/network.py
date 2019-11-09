@@ -112,6 +112,10 @@ class Tcp_handler(Handler):
                 # print(sock.getpeername())
                 # print(data)
                 self.dead = True
+        elif self.dead:
+            self.on_close(sock)
+            self.mainServer.remove_socket(sock)
+            sock.close()
 
     def on_data(self, sock, data):
         print(data)

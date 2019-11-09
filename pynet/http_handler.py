@@ -53,7 +53,7 @@ class HTTPHandler:
         pass
 
 
-class HTTP404(HTTPHandler):
+class HTTP404Handler(HTTPHandler):
     def prepare(self, header):
         self.response.send_error(404)
         return HTTP_CONNECTION_ABORT
