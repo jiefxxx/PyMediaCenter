@@ -50,6 +50,10 @@ class MainWindow(QMainWindow):
         self.stack.setCurrentWidget(self.media_player)
         print(movie)
 
+    def play_row(self, path):
+        self.media_player.load(path)
+        self.stack.setCurrentWidget(self.media_player)
+
     def on_close_player(self):
         self.stack.setCurrentWidget(self.tab)
 
@@ -163,5 +167,6 @@ try:
     app.exec_()
 except KeyboardInterrupt:
     pass
-finally:
-    controller.close()
+del controller.window
+controller.close()
+app.closingDown()

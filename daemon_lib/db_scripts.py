@@ -1,5 +1,5 @@
 from common_lib.config import MEDIA_TYPE_UNKNOWN, MEDIA_TYPE_MOVIE, MEDIA_TYPE_TV
-from pynet.http_server import HTTP_handler
+from pynet.http_handler import HTTPHandler
 from pythread.scriptMananger import Scripts
 from common_lib.videos_info import SearchMovie, get_video_info, get_videos, get_genres
 
@@ -73,15 +73,18 @@ class DBUpdateScripts(Scripts):
                     db.set("videos", video)
 
 
-class ScriptHandler(HTTP_handler):
-    def GET(self, url, script_name, script, db, cm):
+class ScriptHandler(HTTPHandler):
+    def GET(self, url, script_name):
+        scripts = self.user_data["scripts"]
+        cm = self.user_data["config"]
+        db = self.user_data["database"]
         if script_name is None:
-            return self.send_error(404)
+            return self.response.send_error(404)
 
         if script_name == "state":
-            return self.send_json(200, script.get_state())
+            return self.response.send_json(200, scripts.get_state())
 
-        if script.start_script(script_name, db, cm):
-            return self.send_text(200, "ok")
+        if scripts.start_script(script_name, db, cm):
+            return self.response.send_text(200, "ok")
 
-        return self.send_error(404)
+        return self.response.send_error(404)

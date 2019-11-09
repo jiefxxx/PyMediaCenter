@@ -1,3 +1,5 @@
+import os
+
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QTableView, QHeaderView, QAbstractItemView
 
 from mediaCenter_lib.gui.dialogs import TmdbDialog
@@ -18,16 +20,24 @@ class UploadBox(QWidget):
 
         self.movie_button = QIconButton("rsc/icones/movies.png", self)
         self.movie_button.clicked.connect(self.info)
-        self.del_button = QIconButton("rsc/icones/stop.png", self)
+        self.del_button = QIconButton("rsc/icones/garbage.png", self)
         self.del_button.clicked.connect(self.delete)
+        self.play_button = QIconButton("rsc/icones/play.png", self)
+        self.play_button.clicked.connect(self.play)
+        self.remove_button = QIconButton("rsc/icones/stop.png", self)
+        self.remove_button.clicked.connect(self.remove)
         self.send_button = QIconButton("rsc/icones/up.png", self)
         self.send_button.setMinimumHeight(32)
         self.send_button.clicked.connect(self.send)
+
         self.hbox.addWidget(self.add_button)
+        self.hbox.addWidget(self.remove_button)
+        self.hbox.addWidget(self.play_button)
+        self.hbox.addStretch(stretch=True)
         self.hbox.addWidget(self.movie_button)
+        self.hbox.addStretch(stretch=True)
         self.hbox.addWidget(self.del_button)
         self.hbox.addWidget(self.send_button)
-        self.hbox.addStretch(stretch=True)
 
         self.table = QTableView(self)
         self.model = UploadVideoModel(self.table)
@@ -41,6 +51,19 @@ class UploadBox(QWidget):
         for index in self.table.selectionModel().selectedRows():
             self.model.send(index)
 
+    def play(self):
+        if len(self.table.selectionModel().selectedRows()) > 0:
+            index = self.table.selectionModel().selectedRows()[0]
+            video = self.model.data(index)
+            self.window().play_row(video["path"])
+
+    def remove(self):
+        while True:
+            indexes = self.table.selectionModel().selectedRows()
+            if len(indexes) == 0:
+                return
+            self.model.removeRow(indexes[0].row())
+
     def add(self):
         self.model.add()
 
@@ -52,5 +75,10 @@ class UploadBox(QWidget):
                 self.model.set_info(index, dlg.info)
 
     def delete(self):
-        for index in self.table.selectionModel().selectedRows():
-            self.model.removeRow(index.row())
+        while True:
+            indexes = self.table.selectionModel().selectedRows()
+            if len(indexes) == 0:
+                return
+            self.model.removeRow(indexes[0].row())
+            video = self.model.data(indexes[0])
+            os.remove(video["path"])

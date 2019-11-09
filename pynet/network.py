@@ -4,6 +4,8 @@ import socket
 import struct
 import time
 
+CHUNK_SIZE = 1024*5
+
 
 def init_multicastSock(mcast_group, mcast_port):
     multicastSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -26,7 +28,7 @@ def init_serverSock(port, listen=10):
 
 
 class Handler:
-    def __init__(self, name, chunk_size=1024):
+    def __init__(self, name, chunk_size=CHUNK_SIZE):
         self.send_queue = queue.Queue(maxsize=10)
         self.chunk_size = chunk_size
         self.name = name
