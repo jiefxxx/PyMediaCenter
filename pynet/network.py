@@ -8,23 +8,23 @@ CHUNK_SIZE = 1024*5
 
 
 def init_multicastSock(mcast_group, mcast_port):
-    multicastSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    multicastSock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    multicastSock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 32)
-    multicastSock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, 0)
-    multicastSock.bind(('', mcast_port))
+    multicast_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    multicast_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    multicast_sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 32)
+    multicast_sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, 0)
+    multicast_sock.bind(('', mcast_port))
     group = socket.inet_aton(mcast_group)
     mreq = struct.pack('4sL', group, socket.INADDR_ANY)
-    multicastSock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
-    return multicastSock
+    multicast_sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+    return multicast_sock
 
 
 def init_serverSock(port, listen=10):
-    serverSock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    serverSock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    serverSock.bind(('', port))
-    serverSock.listen(listen)
-    return serverSock
+    server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server_sock.bind(('', port))
+    server_sock.listen(listen)
+    return server_sock
 
 
 class Handler:
@@ -33,6 +33,8 @@ class Handler:
         self.chunk_size = chunk_size
         self.name = name
         self.addr = None
+        self.dead = False
+        self.main_server = None
 
     def send(self, data, chunk_size=None):
         if chunk_size is None:
@@ -49,41 +51,43 @@ class Handler:
             else:
                 return False
 
-    def on_init(self, mainServer, socket):
-        self.mainServer = mainServer
+    def on_init(self, main_server, sock):
+        self.main_server = main_server
         print("init socket(" + self.name + ") :" + str(self.addr))
 
-    def on_exceptional(self, socket):
+    def on_exceptional(self, sock):
         print("close socket(" + self.name + ") :" + str(self.addr))
 
-    def on_readable(self, socket):
+    def on_readable(self, sock):
         pass
 
-    def on_writable(self, socket):
+    def on_writable(self, sock):
         pass
 
+    def readable(self):
+        return False
 
-class Tcp_server_handler(Handler):
+
+class TcpServerHandler(Handler):
 
     def __init__(self, client_handler):
         Handler.__init__(self, "server")
         self.client_handler = client_handler
 
-    def on_init(self, mainServer, sock):
+    def on_init(self, main_server, sock):
         self.addr = sock.getsockname()
-        Handler.on_init(self, mainServer, sock)
+        Handler.on_init(self, main_server, sock)
 
     def on_readable(self, sock):
         s, addr = sock.accept()
-        #s.settimeout(0.5)
-        self.mainServer.add_socket(s, self.client_handler(self))
+        self.main_server.add_socket(s, self.client_handler(self))
 
 
-class Tcp_handler(Handler):
+class TcpHandler(Handler):
 
-    def on_init(self, mainServer, sock):
+    def on_init(self, main_server, sock):
         self.addr = sock.getpeername()
-        Handler.on_init(self, mainServer, sock)
+        Handler.on_init(self, main_server, sock)
 
     def on_readable(self, sock):
         try:
@@ -92,13 +96,11 @@ class Tcp_handler(Handler):
                 self.on_data(sock, data)
             else:
                 self.on_exceptional(sock)
-                self.on_close(sock)
-                self.mainServer.remove_socket(sock)
+                self.main_server.remove_socket(sock)
                 sock.close()
         except ConnectionResetError:
             self.on_exceptional(sock)
-            self.on_close(sock)
-            self.mainServer.remove_socket(sock)
+            self.main_server.remove_socket(sock)
             sock.close()
 
     def on_writable(self, sock):
@@ -109,64 +111,58 @@ class Tcp_handler(Handler):
                 sock.send(data)
             except socket.error:
                 print("error socket(" + self.name + ") :" + str(self.addr))
-                # print(sock.getpeername())
-                # print(data)
                 self.dead = True
+
         elif self.dead:
-            self.on_close(sock)
-            self.mainServer.remove_socket(sock)
+            self.main_server.remove_socket(sock)
             sock.close()
+
+    def readable(self):
+        return not self.send_queue.empty()
 
     def on_data(self, sock, data):
-        print(data)
-        pass
-
-    def on_close(self, sock):
-        # print("close")
         pass
 
 
-class MainServer():
-    def __init__(self, chunk_size=1024):
+class MainServer:
+    def __init__(self):
         self.socket_map = {}
 
-    def add_socket(self, socket, handler):
-        handler.on_init(self, socket)
-        self.socket_map[socket] = handler
+    def add_socket(self, sock, handler):
+        handler.on_init(self, sock)
+        self.socket_map[sock] = handler
 
-    def get_handler(self, socket):
-        return self.socket_map[socket]
+    def get_handler(self, sock):
+        return self.socket_map[sock]
 
     def get_sockets(self):
-        return list(self.socket_map.keys())
+        readable = []
+        writeable = []
+        for sock in self.socket_map.keys():
+            readable.append(sock)
+            if self.socket_map[sock].readable():
+                writeable.append(sock)
+        return readable, writeable
 
-    def remove_socket(self, socket):
-        del (self.socket_map[socket])
+    def remove_socket(self, sock):
+        self.get_handler(sock).close()
+        del (self.socket_map[sock])
+        sock.close()
 
     def close(self):
-        for sock in self.get_sockets():
-            self.get_handler(sock).close()
+        for sock in list(self.socket_map.keys()):
             self.remove_socket(sock)
-            sock.close()
 
     def run_once(self):
-        socks = self.get_sockets()
-        # print(socks)
-        readable, writable, exceptional = select.select(socks, socks, socks, 0)
+        input_sock, output_sock = self.get_sockets()
+        readable, writable, exceptional = select.select(input_sock, output_sock, input_sock, 0.01)
 
-        void = True
         for s in exceptional:
             self.get_handler(s).on_exceptional(s)
             self.remove_socket(s)
-            void = False
 
         for s in writable:
             self.get_handler(s).on_writable(s)
-            void = False
 
         for s in readable:
             self.get_handler(s).on_readable(s)
-            void = False
-
-        if void:
-            time.sleep(0.05)

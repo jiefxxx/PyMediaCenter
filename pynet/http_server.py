@@ -2,16 +2,16 @@ import re
 
 import pynet.http_request
 import pynet.http_response
-from pynet.http_handler import HTTP404Handler
+from pynet.http_handler import HTTP404Handler, HTTPHandler
 from pynet.http_tools import HTTP_CONNECTION_ABORT, HTTP_CONNECTION_CONTINUE, HTTP_CONNECTION_UPGRADE
-from pynet.network import Tcp_handler, Tcp_server_handler
+from pynet.network import TcpHandler, TcpServerHandler
 from pythread.threadMananger import ThreadMananger, threadedFunction
 
 
-class HTTPConnection(Tcp_handler):
+class HTTPConnection(TcpHandler):
 
     def __init__(self, server):
-        Tcp_handler.__init__(self, "HTTP_handler")
+        TcpHandler.__init__(self, "HTTP_handler")
         self.current_Request = None
         self.server = server
         self.prev_data = b""
@@ -46,9 +46,9 @@ class HTTPConnection(Tcp_handler):
         self.dead = True
 
 
-class HTTPServer(Tcp_server_handler, ThreadMananger):
+class HTTPServer(TcpServerHandler, ThreadMananger):
     def __init__(self):
-        Tcp_server_handler.__init__(self, HTTPConnection)
+        TcpServerHandler.__init__(self, HTTPConnection)
         ThreadMananger.__init__(self, nbr_thread=5)
         self.route = []
         self.user_data = {}
@@ -71,7 +71,7 @@ class HTTPServer(Tcp_server_handler, ThreadMananger):
                 user_data["#regex_data"] = tuple(args)
                 return handler, user_data
         print(path)
-        return HTTP404Handler, {"#regex_data": ()}
+        return HTTPHandler, {"#regex_data": ()}
 
     def add_user_data(self, name, value):
         self.user_data[name] = value
