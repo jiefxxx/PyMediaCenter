@@ -105,7 +105,7 @@ class TcpHandler(Handler):
         try:
             data = sock.recv(self.chunk_size)
             if len(data) > 0:
-                self.on_data(sock, data)
+                self.on_data(data)
             else:
                 self.kill()
         except ConnectionResetError:
@@ -121,7 +121,7 @@ class TcpHandler(Handler):
     def readable(self):
         return not self.send_queue.empty()
 
-    def on_data(self, sock, data):
+    def on_data(self, data):
         pass
 
 

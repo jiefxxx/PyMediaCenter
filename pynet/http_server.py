@@ -17,7 +17,7 @@ class HTTPConnection(TcpHandler):
         self.prev_data = b""
         self.upgrade_client = None
 
-    def on_data(self, socket, data):
+    def on_data(self, data):
         if self.upgrade_client:
             self.prev_data = self.upgrade_client.feed(self.prev_data + data)
             return
@@ -28,7 +28,7 @@ class HTTPConnection(TcpHandler):
 
         if self.current_Request.completed():
             if self.current_Request.prepare_return == HTTP_CONNECTION_ABORT:
-                self.close()
+                self.finished()
                 return
             if self.current_Request.prepare_return == HTTP_CONNECTION_CONTINUE:
                 self.server.execute_request(self.current_Request)
@@ -63,8 +63,7 @@ class HTTPServer(TcpServerHandler, ThreadMananger):
                     args.append(group)
                 user_data["#regex_data"] = tuple(args)
                 return handler, user_data
-        print(path)
-        return HTTPHandler, {"#regex_data": ()}
+        return HTTP404Handler, {"#regex_data": ()}
 
     def add_user_data(self, name, value):
         self.user_data[name] = value
