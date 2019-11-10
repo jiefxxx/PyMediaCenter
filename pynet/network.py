@@ -2,7 +2,6 @@ import queue
 import select
 import socket
 import struct
-import time
 
 CHUNK_SIZE = 1024*5
 
@@ -29,12 +28,13 @@ def init_serverSock(port, listen=10):
 
 class Handler:
     def __init__(self, name, chunk_size=CHUNK_SIZE):
-        self.send_queue = queue.Queue(maxsize=10)
+        self.send_queue = queue.Queue(maxsize=100)
         self.chunk_size = chunk_size
         self.name = name
         self.addr = None
         self.dead = False
         self.main_server = None
+        self.error = False
 
     def send(self, data, chunk_size=None):
         if chunk_size is None:
@@ -55,7 +55,7 @@ class Handler:
         self.main_server = main_server
         print("init socket(" + self.name + ") :" + str(self.addr))
 
-    def on_exceptional(self, sock):
+    def on_close(self, sock):
         print("close socket(" + self.name + ") :" + str(self.addr))
 
     def on_readable(self, sock):
@@ -95,27 +95,16 @@ class TcpHandler(Handler):
             if len(data) > 0:
                 self.on_data(sock, data)
             else:
-                self.on_exceptional(sock)
-                self.main_server.remove_socket(sock)
-                sock.close()
+                self.error = True
         except ConnectionResetError:
-            self.on_exceptional(sock)
-            self.main_server.remove_socket(sock)
-            sock.close()
+            self.error = True
 
     def on_writable(self, sock):
-        if not self.send_queue.empty():
-            data = self.send_queue.get()
-            try:
-                # print("send :", len(data))
-                sock.send(data)
-            except socket.error:
-                print("error socket(" + self.name + ") :" + str(self.addr))
-                self.dead = True
-
-        elif self.dead:
-            self.main_server.remove_socket(sock)
-            sock.close()
+        data = self.send_queue.get()
+        try:
+            sock.send(data)
+        except socket.error:
+            self.error = True
 
     def readable(self):
         return not self.send_queue.empty()
@@ -138,14 +127,19 @@ class MainServer:
     def get_sockets(self):
         readable = []
         writeable = []
-        for sock in self.socket_map.keys():
+        for sock in list(self.socket_map.keys()):
             readable.append(sock)
-            if self.socket_map[sock].readable():
+            if self.socket_map[sock].readable() and not self.socket_map[sock].error:
                 writeable.append(sock)
+            elif self.socket_map[sock].dead or self.socket_map[sock].error:
+                readable.remove(sock)
+                self.remove_socket(sock)
         return readable, writeable
 
     def remove_socket(self, sock):
-        self.get_handler(sock).close()
+        handler = self.get_handler(sock)
+        handler.on_close(sock)
+        handler.close()
         del (self.socket_map[sock])
         sock.close()
 

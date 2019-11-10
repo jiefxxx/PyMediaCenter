@@ -44,5 +44,6 @@ class HTTPRequest:
         return False
 
     def close(self):
+        self.connection.close()
         if self.handler:
             self.handler.close()
