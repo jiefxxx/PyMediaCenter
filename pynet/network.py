@@ -32,9 +32,9 @@ class Handler:
         self.chunk_size = chunk_size
         self.name = name
         self.addr = None
-        self.dead = False
         self.main_server = None
-        self.error = False
+        self.terminated = False
+        self.finish = False
 
     def send(self, data, chunk_size=None):
         if chunk_size is None:
@@ -67,6 +67,18 @@ class Handler:
     def readable(self):
         return False
 
+    def finished(self):
+        self.finish = True
+
+    def kill(self):
+        self.terminated = True
+
+    def is_alive(self):
+        return not self.terminated
+
+    def close(self):
+        pass
+
 
 class TcpServerHandler(Handler):
 
@@ -95,16 +107,16 @@ class TcpHandler(Handler):
             if len(data) > 0:
                 self.on_data(sock, data)
             else:
-                self.error = True
+                self.kill()
         except ConnectionResetError:
-            self.error = True
+            self.kill()
 
     def on_writable(self, sock):
         data = self.send_queue.get()
         try:
             sock.send(data)
         except socket.error:
-            self.error = True
+            self.kill()
 
     def readable(self):
         return not self.send_queue.empty()
@@ -128,16 +140,22 @@ class MainServer:
         readable = []
         writeable = []
         for sock in list(self.socket_map.keys()):
-            readable.append(sock)
-            if self.socket_map[sock].readable() and not self.socket_map[sock].error:
-                writeable.append(sock)
-            elif self.socket_map[sock].dead or self.socket_map[sock].error:
-                readable.remove(sock)
+
+            if self.socket_map[sock].terminated:
                 self.remove_socket(sock)
+            elif self.socket_map[sock].readable():
+                readable.append(sock)
+                writeable.append(sock)
+            elif self.socket_map[sock].finish:
+                self.remove_socket(sock)
+            else:
+                readable.append(sock)
+
         return readable, writeable
 
     def remove_socket(self, sock):
         handler = self.get_handler(sock)
+        handler.kill()
         handler.on_close(sock)
         handler.close()
         del (self.socket_map[sock])

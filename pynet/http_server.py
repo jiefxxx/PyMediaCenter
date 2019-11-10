@@ -15,7 +15,6 @@ class HTTPConnection(TcpHandler):
         self.current_Request = None
         self.server = server
         self.prev_data = b""
-        self.dead = False
         self.upgrade_client = None
 
     def on_data(self, socket, data):
@@ -38,12 +37,6 @@ class HTTPConnection(TcpHandler):
             if self.current_Request.prepare_return == HTTP_CONNECTION_UPGRADE:
                 self.upgrade_client = self.current_Request.upgrade_client
                 return
-
-    def on_close(self, socket):
-        self.dead = True
-
-    def close(self):
-        self.dead = True
 
 
 class HTTPServer(TcpServerHandler, ThreadMananger):

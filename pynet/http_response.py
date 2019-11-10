@@ -32,7 +32,6 @@ class HTTPResponse:
         self.request.connection.send(str(self).encode() + data.encode())
 
     def send_json(self, code, data=None):
-        # self.request.connection.stream = True
         if not data:
             data = {}
         dump = json.dumps(data, sort_keys=True, indent=4)
@@ -53,14 +52,12 @@ class HTTPResponse:
         self.send_data("")
 
     def send_file(self, path):
-        self.request.connection.stream = True
-
         r = self.request.header.fields.get("Range")
         self.fields.set("Content-type", magic.Magic(mime=True).from_file(path))
         seek = 0
         if r is not None:
             seek = int(r.split("=")[1][:-1])
-        seek_end = os.path.getsize(path) - 1  # seek end not fully implemented
+        seek_end = os.path.getsize(path) - 1  # TODO:seek end not fully implemented
         full_size = os.path.getsize(path)
         size = seek_end - seek + 1
 
@@ -78,12 +75,11 @@ class HTTPResponse:
         while True:
             seek, data = chunk(path, seek)
             while True:
-                if self.request.connection.dead:
+                if not self.request.connection.is_alive():
                     break
                 if self.send_data(data):
                     break
                 time.sleep(0.05)
 
-            if seek >= full_size or self.request.connection.dead:
-                print("end ", self.request.connection.dead)
+            if seek >= full_size or not self.request.connection.is_alive():
                 break
