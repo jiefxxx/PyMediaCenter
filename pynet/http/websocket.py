@@ -2,8 +2,9 @@ import base64
 import hashlib
 import struct
 
-from pynet.http_handler import HTTPHandler
-from pynet.http_tools import HTTP_CONNECTION_ABORT, HTTP_CONNECTION_UPGRADE
+from pynet.http.tools import HTTP_CONNECTION_ABORT, HTTP_CONNECTION_UPGRADE
+
+from pynet.http.handler import HTTPHandler
 from pythread.threadMananger import ThreadMananger, threadedFunction
 
 

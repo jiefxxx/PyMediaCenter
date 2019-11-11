@@ -1,4 +1,4 @@
-from pynet.http_header import HTTPHeader
+from pynet.http.header import HTTPHeader
 
 
 class HTTPRequest:

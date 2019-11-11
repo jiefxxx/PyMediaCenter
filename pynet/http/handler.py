@@ -1,6 +1,7 @@
-from pynet.http_data import HTTPData
-from pynet.http_response import HTTPResponse
-from pynet.http_tools import HTTP_CONNECTION_ABORT, HTTP_CONNECTION_CONTINUE
+from pynet.http.data import HTTPData
+from pynet.http.tools import HTTP_CONNECTION_ABORT, HTTP_CONNECTION_CONTINUE
+
+from pynet.http.response import HTTPResponse
 
 
 class HTTPHandler:

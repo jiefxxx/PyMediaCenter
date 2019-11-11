@@ -1,6 +1,6 @@
 from urllib.parse import urlparse, parse_qsl
 
-from pynet.http_tools import http_parse_query, http_parse_field
+from pynet.http.tools import http_parse_query, http_parse_field
 
 
 class HTTPHeader:

@@ -7,8 +7,8 @@ from streaming_form_data.targets import FileTarget, ValueTarget
 
 from common_lib.config import MEDIA_TYPE_MOVIE
 from common_lib.videos_info import get_video_info, get_movie_info, get_normalized_file_name, check_for_space
-from pynet.http_handler import HTTPHandler
-from pynet.http_tools import HTTP_CONNECTION_ABORT, HTTP_CONNECTION_CONTINUE
+from pynet.http.handler import HTTPHandler
+from pynet.http.tools import HTTP_CONNECTION_ABORT, HTTP_CONNECTION_CONTINUE
 
 
 class UploadHandler(HTTPHandler):

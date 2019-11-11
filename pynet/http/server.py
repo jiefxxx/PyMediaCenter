@@ -1,9 +1,8 @@
 import re
 
-import pynet.http_request
-import pynet.http_response
-from pynet.http_handler import HTTP404Handler, HTTPHandler
-from pynet.http_tools import HTTP_CONNECTION_ABORT, HTTP_CONNECTION_CONTINUE, HTTP_CONNECTION_UPGRADE
+from pynet.http.handler import HTTP404Handler
+from pynet.http.request import HTTPRequest
+from pynet.http.tools import HTTP_CONNECTION_ABORT, HTTP_CONNECTION_CONTINUE, HTTP_CONNECTION_UPGRADE
 from pynet.network import TcpHandler, TcpServerHandler
 from pythread.threadMananger import ThreadMananger, threadedFunction
 
@@ -23,7 +22,7 @@ class HTTPConnection(TcpHandler):
             return
 
         if self.current_Request is None:
-            self.current_Request = pynet.http_request.HTTPRequest(self)
+            self.current_Request = HTTPRequest(self)
         self.prev_data = self.current_Request.feed(self.prev_data + data)
 
         if self.current_Request.completed():

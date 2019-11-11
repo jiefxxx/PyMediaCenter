@@ -3,9 +3,8 @@ import os
 import time
 
 import magic
-
-from pynet.http_header import HTTPFields
-from pynet.http_tools import http_code_to_string, chunk
+from pynet.http.header import HTTPFields
+from pynet.http.tools import http_code_to_string, chunk
 
 
 class HTTPResponse:

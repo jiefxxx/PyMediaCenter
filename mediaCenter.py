@@ -6,7 +6,7 @@ from pathlib import Path
 import requests
 from PyQt5.QtCore import Qt, QSize
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtWidgets import QApplication, QMainWindow, QStackedWidget, QWidget, QTabWidget
+from PyQt5.QtWidgets import QApplication, QMainWindow, QStackedWidget, QTabWidget
 
 from mediaCenter_lib.gui.mediaplayer import MediaPlayer
 from mediaCenter_lib.gui.movies import Movies
@@ -57,9 +57,9 @@ class MainWindow(QMainWindow):
     def on_close_player(self):
         self.stack.setCurrentWidget(self.tab)
 
-    def full_screen(self, bool=None):
+    def full_screen(self, b=True):
         if self.isFullScreen():
-            if bool is None or True:
+            if b:
                 self.showNormal()
                 if self.wasMaximized:
                     self.showMaximized()
@@ -95,7 +95,7 @@ class Root(ThreadMananger):
 
         poster_path = self.app_data_path + "/poster"
 
-        self.poster_mini_path = poster_path +"/mini"
+        self.poster_mini_path = poster_path + "/mini"
         self.poster_original_path = poster_path + "/original"
 
         if not os.path.exists(self.app_data_path):

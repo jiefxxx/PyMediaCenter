@@ -9,7 +9,7 @@ from common_lib.config import ConfigMananger
 
 from pydbm import DataBase
 
-from pynet.http_server import HTTPServer
+from pynet.http.server import HTTPServer
 from pynet.network import MainServer, init_serverSock
 
 import sys
