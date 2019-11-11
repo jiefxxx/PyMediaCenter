@@ -1,57 +1,139 @@
+import asyncio
 import re
 
+import janus
+
 from pynet.http.handler import HTTP404Handler
-from pynet.http.request import HTTPRequest
+from pynet.http.header import HTTPHeader
 from pynet.http.tools import HTTP_CONNECTION_ABORT, HTTP_CONNECTION_CONTINUE, HTTP_CONNECTION_UPGRADE
-from pynet.network import TcpHandler, TcpServerHandler
-from pythread import create_new_mode, threaded, close_mode
+from pythread import threaded, create_new_mode
 from pythread.modes import ProcessMode
 
+CHUNK_SIZE = 1024*5
 
 
-
-class HTTPConnection(TcpHandler):
-
-    def __init__(self, server):
-        TcpHandler.__init__(self, "HTTP_handler")
-        self.current_Request = None
-        self.server = server
-        self.prev_data = b""
-        self.upgrade_client = None
-
-    def on_data(self, data):
-        if self.upgrade_client:
-            self.prev_data = self.upgrade_client.feed(self.prev_data + data)
-            return
-
-        if self.current_Request is None:
-            self.current_Request = HTTPRequest(self)
-        self.prev_data = self.current_Request.feed(self.prev_data + data)
-
-        if self.current_Request.completed():
-            if self.current_Request.prepare_return == HTTP_CONNECTION_ABORT:
-                self.finished()
-                return
-            if self.current_Request.prepare_return == HTTP_CONNECTION_CONTINUE:
-                self.server.execute_request(self.current_Request)
-                self.current_Request = None
-                return
-            if self.current_Request.prepare_return == HTTP_CONNECTION_UPGRADE:
-                self.upgrade_client = self.current_Request.upgrade_client
-                return
+async def feed_stream_reader(reader, stream_reader):
+    prev_data = b''
+    while True:
+        data = await reader.read(CHUNK_SIZE)
+        prev_data = stream_reader.feed(prev_data + data)
 
 
-class HTTPServer(TcpServerHandler):
-    def __init__(self):
-        create_new_mode(ProcessMode, "httpServer", size=5)
-        TcpServerHandler.__init__(self, HTTPConnection)
-        self.route = []
-        self.user_data = {}
+async def get_header(reader):
+    header = HTTPHeader()
+    while True:
+        data = await reader.readline()
+        data = data[:-2]
+        if len(data) > 0:
+            header.parse_line(data)
+        else:
+            break
+    return header
+
+
+async def feed_data(reader, size, handler):
+    while size > 0:
+        if CHUNK_SIZE > size:
+            data = await reader.read(size)
+        else:
+            data = await reader.read(CHUNK_SIZE)
+        size -= len(data)
+        if asyncio.iscoroutinefunction(handler.feed):
+            await handler.feed(data)
+        else:
+            handler.feed(data)
+
+
+class HTTPConnection:
+    def __init__(self, server, writer, reader, loop):
+        self.queue = janus.Queue(maxsize=100, loop=loop)
+        self.server, self.writer, self.reader = server, writer, reader
+        self.alive = True
+
+    def is_alive(self):
+        return self.alive
+
+    def send(self, data, chunk_size=None):
+        if chunk_size is None:
+            chunk_size = CHUNK_SIZE
+        if chunk_size > 0:
+            while len(data) > chunk_size:
+                self.queue.sync_q.put(data[:chunk_size])
+                data = data[chunk_size:]
+            self.queue.sync_q.put(data)
+        else:
+            if not self.queue.sync_q.full():
+                self.queue.sync_q.put(data)
+                return True
+            else:
+                return False
+
+    def get_handler(self, header):
+        handler, args = self.server.get_route(header.url.path)
+        return handler(header, self, args)
+
+    def close(self):
+        if self.alive:
+            self.queue.sync_q.put(None)
+
+    def kill(self):
+        self.alive = False
+        self.writer.close()
 
     @threaded("httpServer")
-    def execute_request(self, request):
-        request.handler.execute_request()
-        request.close()
+    def execute(self, handler):
+        handler.execute_request()
+
+    async def sender(self):
+        try:
+
+            while True:
+                data = await self.queue.async_q.get()
+                if data is None:
+                    self.kill()
+                    return
+                self.writer.write(data)
+                await self.writer.drain()
+
+        except (ConnectionResetError, BrokenPipeError):
+            self.kill()
+
+    async def receiver(self):
+        header = await get_header(self.reader)
+        if not header.is_valid():
+            self.close()
+            return
+
+        handler = self.get_handler(header)
+        if asyncio.iscoroutinefunction(handler.prepare):
+            prepare_return = await handler.prepare()
+        else:
+            prepare_return = handler.prepare()
+
+        if prepare_return == HTTP_CONNECTION_ABORT:
+            return self.close()
+
+        elif prepare_return == HTTP_CONNECTION_CONTINUE:
+            data_count = int(header.fields.get("Content-Length", default='0'))
+            await feed_data(self.reader, data_count, handler)
+
+            await self.execute(handler).async_wait()
+
+            return self.close()
+
+        elif prepare_return == HTTP_CONNECTION_UPGRADE:
+            stream_reader = handler.upgraded_streamReader
+            await feed_stream_reader(self.reader, stream_reader)
+
+            return self.close()
+
+        self.close()
+
+
+class HTTPRouter:
+    def __init__(self):
+        self.route = []
+        self.user_data = {}
 
     def get_route(self, path):
         for reg_path, handler, user_data in self.route:
@@ -77,5 +159,23 @@ class HTTPServer(TcpServerHandler):
             user_data["#ws_room"] = ws
         self.route.append((reg_path, handler, user_data))
 
+
+class HTTPServer(HTTPRouter):
+    def __init__(self, loop):
+        HTTPRouter.__init__(self)
+        self.loop = loop
+        self.server = None
+        create_new_mode(ProcessMode, "httpServer", size=5)
+
+    async def root_handler(self, reader, writer):
+        connection = HTTPConnection(self, writer, reader, self.loop)
+        await asyncio.gather(connection.sender(), connection.receiver())
+
+    def initialize(self):
+        coro = asyncio.start_server(self.root_handler, reuse_address=True, port=4242, loop=self.loop)
+        self.server = self.loop.run_until_complete(coro)
+        print('Serving on {}'.format(self.server.sockets[0].getsockname()))
+
     def close(self):
-        close_mode("httpServer")
+        self.server.close()
+        self.loop.run_until_complete(self.server.wait_closed())

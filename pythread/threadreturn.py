@@ -1,6 +1,14 @@
+import asyncio
 import queue
 import threading
 import types
+
+
+class Event(asyncio.Event):
+    # TODO: clear() method
+    def set(self):
+        # FIXME: The _loop attribute is not documented as public api!
+        self._loop.call_soon_threadsafe(super().set)
 
 
 class ThreadReturn:
@@ -8,9 +16,14 @@ class ThreadReturn:
         self.value = None
         self.error = None
         self.completeEvent = threading.Condition()
+        self.asyncEvent = Event()
         self.completed = False
         self.gen_queue = queue.Queue()
         self.gen = False
+
+    async def async_wait(self):
+        await self.asyncEvent.wait()
+        self.asyncEvent.clear()
 
     def join(self):
         with self.completeEvent:
@@ -20,7 +33,8 @@ class ThreadReturn:
         with self.completeEvent:
             self.completed = True
             self.completeEvent.notify_all()
-            if(isinstance(value, types.GeneratorType)):
+            self.asyncEvent.set()
+            if isinstance(value, types.GeneratorType):
                 self.gen = True
                 for data in value:
                     self.gen_queue.put(data)
@@ -38,7 +52,7 @@ class ThreadReturn:
     def _get_generator(self):
         while True:
             data = self.gen_queue.get()
-            if(self.error is not None):
+            if self.error is not None:
                 raise self.error
             if data is not None:
                 yield data
@@ -46,10 +60,10 @@ class ThreadReturn:
                 break
 
     def get_value(self):
-        if(not self.completed):
+        if not self.completed:
             self.join()
         if self.gen:
             return self._get_generator()
-        if(self.error is not None):
+        if self.error is not None:
             raise self.error
         return self.value

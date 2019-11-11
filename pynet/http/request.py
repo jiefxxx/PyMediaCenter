@@ -20,7 +20,7 @@ class HTTPRequest:
             if len(line) == 0:
                 self.header_completed = True
                 handler, args = self.connection.server.get_route(self.header.url.path)
-                self.handler = handler(self, args)
+                self.handler = handler(self.header, self.connection, args)
                 self.data_count = int(self.header.fields.get("Content-Length", default='0'))
                 self.prepare_return = self.handler.prepare(self.header)
             else:

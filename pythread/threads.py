@@ -21,6 +21,7 @@ class Thread(threading.Thread):
             value = fct(*args, **kwargs)
             if ret is not None:
                 ret.set_value(value)
+            return value
         except Exception as e:
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback, file=sys.stdout)
@@ -61,9 +62,12 @@ class RunOnceThread(Thread):
             self.sync.wait()
             if not self._terminate:
                 self.busy = True
-                debug_print(self, "execute ", self.fct.__name__, str(self.args), str(self.kwargs), " in ", self.getName())
+                debug_print(self, "execute ", self.fct.__name__, str(self.args),
+                            str(self.kwargs), " in ", self.getName())
+
                 self._exec_fct(self.fct, None, self.args, self.kwargs)
                 self.busy = False
+                return True
 
     def is_busy(self):
         return self.busy
@@ -93,8 +97,9 @@ class RunForeverThread(Thread):
         self.start()
 
     def _run(self):
-        debug_print(self, "execute ", self.fct.__name__, str(self.args), str(self.kwargs), " in ", self.getName())
-        self._exec_fct(self.fct, None, self.args, self.kwargs)
+        debug_print(self, "execute ", self.fct.__name__, str(self.args),
+                    str(self.kwargs), " in ", self.getName())
+        return self._exec_fct(self.fct, None, self.args, self.kwargs)
 
     def reset(self, fct, args, kwargs):
         self.fct = fct
@@ -117,7 +122,8 @@ class ProcessThread(Thread):
         if processing_data is None:
             return False
         fct, ret, args, kwargs = processing_data
-        debug_print(self, "execute ", fct.__name__, str(args), str(kwargs), " in ", self.getName())
+        debug_print(self, "execute ", fct.__name__, str(args),
+                    str(kwargs), " in ", self.getName())
         self._running = True
         self._exec_fct(fct, ret, args, kwargs)
         self._running = False

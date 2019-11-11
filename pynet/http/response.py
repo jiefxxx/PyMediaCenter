@@ -8,8 +8,9 @@ from pynet.http.tools import http_code_to_string, chunk, HTTP_CONNECTION_UPGRADE
 
 
 class HTTPResponse:
-    def __init__(self, request):
-        self.request = request
+    def __init__(self, request_header, connection):
+        self.request_header = request_header
+        self.connection = connection
         self.proto = "HTTP/1.1"
         self.code = 404
         self.fields = HTTPFields()
@@ -31,7 +32,6 @@ class HTTPResponse:
         self.send_text(101, "")
         return HTTP_CONNECTION_UPGRADE
 
-
     def send_text(self, code, data=None, content_type="text/text"):
         self.code = code
         if data is not None:
@@ -39,7 +39,7 @@ class HTTPResponse:
             self.fields.set("Content-type", content_type)
         else:
             data = ''
-        self.request.connection.send(str(self).encode() + data.encode())
+        self.connection.send(str(self).encode() + data.encode())
 
     def send_json(self, code, data=None):
         if not data:
@@ -49,12 +49,12 @@ class HTTPResponse:
 
     def send_header(self, code):
         self.code = code
-        self.request.connection.send(str(self).encode())
+        self.connection.send(str(self).encode())
 
     def send_data(self, data):
         if type(data) is str:
             data = data.encode()
-        return self.request.connection.send(data, chunk_size=0)
+        return self.connection.send(data, chunk_size=0)
 
     def send_error(self, code):
         self.fields.set("Content-Length", str(0))
@@ -62,7 +62,7 @@ class HTTPResponse:
         self.send_data("")
 
     def send_file(self, path):
-        r = self.request.header.fields.get("Range")
+        r = self.request_header.fields.get("Range")
         self.fields.set("Content-type", magic.Magic(mime=True).from_file(path))
         seek = 0
         if r is not None:
@@ -85,11 +85,11 @@ class HTTPResponse:
         while True:
             seek, data = chunk(path, seek)
             while True:
-                if not self.request.connection.is_alive():
+                if not self.connection.is_alive():
                     break
                 if self.send_data(data):
                     break
                 time.sleep(0.05)
 
-            if seek >= full_size or not self.request.connection.is_alive():
+            if seek >= full_size or not self.connection.is_alive():
                 break

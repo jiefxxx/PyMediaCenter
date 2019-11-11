@@ -8,17 +8,21 @@ from pynet.http.response import HTTPResponse
 
 
 class HTTPHandler:
-    def __init__(self, request, args):
-        self.user_data, self.request = args, request
-        self.response = HTTPResponse(self.request)
+    def __init__(self, header, connection, args):
+        self.user_data, self.header, self.connection = args, header, connection
+        self.response = HTTPResponse(self.header, connection)
         self.dead = False
         self.data = None
+        self.upgraded_streamReader = None
+
+    def upgrade(self, stream_reader):
+        self.upgraded_streamReader = stream_reader
 
     def get_webSocket_room(self):
         return self.user_data.get("#ws_room")
 
-    def prepare(self, header):
-        content_length = int(header.fields.get("Content-Length", default='0'))
+    def prepare(self):
+        content_length = int(self.header.fields.get("Content-Length", default='0'))
         if content_length > 0:
             self.data = HTTPData(content_length)
         return HTTP_CONNECTION_CONTINUE
@@ -37,21 +41,21 @@ class HTTPHandler:
             self.response.send_error(500)
 
     def _execute_request(self):
-        if self.request.header.query == "GET":
+        if self.header.query == "GET":
 
-            self.GET(self.request.header.url, *self.user_data["#regex_data"])
+            self.GET(self.header.url, *self.user_data["#regex_data"])
 
-        elif self.request.header.query == "PUT":
-            self.PUT(self.request.header.url, *self.user_data["#regex_data"])
+        elif self.header.query == "PUT":
+            self.PUT(self.header.url, *self.user_data["#regex_data"])
 
-        elif self.request.header.query == "DELETE":
-            self.DELETE(self.request.header.url, *self.user_data["#regex_data"])
+        elif self.header.query == "DELETE":
+            self.DELETE(self.header.url, *self.user_data["#regex_data"])
 
-        elif self.request.header.query == "POST":
-            self.POST(self.request.header.url, *self.user_data["#regex_data"])
+        elif self.header.query == "POST":
+            self.POST(self.header.url, *self.user_data["#regex_data"])
 
         else:
-            raise Exception("Unknown Method "+self.request.header.query)
+            raise Exception("Unknown Method "+self.header.query)
 
     def GET(self, url, *args):
         self.response.send_error(404)
@@ -70,7 +74,7 @@ class HTTPHandler:
 
 
 class HTTP404Handler(HTTPHandler):
-    def prepare(self, header):
+    def prepare(self):
         self.response.send_error(404)
         return HTTP_CONNECTION_ABORT
 

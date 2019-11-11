@@ -13,11 +13,16 @@ def parse_movie_name(path_name):
 
 
 class DBUpdateScripts(Scripts):
-    def __init__(self):
+    def __init__(self, web_socket_send):
+        self.webSocket_send = web_socket_send
         Scripts.__init__(self)
         self.set_script("update_videos", self.update_videos)
         self.set_script("update_movies", self.update_movies)
         self.set_script("update_genres", self.update_genres)
+
+    def set_progress(self, progress, string):
+        Scripts.set_progress(self, progress, string)
+        self.webSocket_send.send_json(self.get_state())
 
     def update_genres(self, db, cm):
         self.set_progress(0, "started")

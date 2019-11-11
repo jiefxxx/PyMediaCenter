@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import json
 import struct
 
 from pynet.http.tools import HTTP_CONNECTION_ABORT, HTTP_CONNECTION_UPGRADE
@@ -71,8 +72,9 @@ def webSocket_compile(fin, opcode, data):
 
 
 class WebSocketClient:
-    def __init__(self, request, room):
-        self.request = request
+    def __init__(self, header, connection, room):
+        self.request_header = header
+        self.connection = connection
         self.room = room
         self.room.new_client(self)
 
@@ -83,7 +85,7 @@ class WebSocketClient:
 
     def send(self, fin, opcode, data):
         message = webSocket_compile(fin, opcode, data)
-        self.request.connection.send(message, chunk_size=0)
+        self.connection.send(message, chunk_size=0)
 
     def send_text(self, text):
         self.send(1, 1, text.encode())
@@ -97,7 +99,6 @@ class WebSocketRoom:
         self.clients = []
         self.name = name
 
-    @threaded("httpServer")
     def new_client(self, client):
         if client not in self.clients:
             self.clients.append(client)
@@ -124,24 +125,27 @@ class WebSocketRoom:
     def on_new(self, client):
         pass
 
-    def send(self, client, data):
-        if client not in self.clients:
+    def send(self, data, client=None):
+        if client is None:
+            for client in self.clients:
+                self.send(data, client=client)
+        elif client not in self.clients:
             raise Exception("client unknown")
-        if type(data) == str:
+        elif type(data) == str:
             client.send_text(data)
         elif type(data) == bytearray:
             client.send_binary(data)
         else:
             raise Exception("Unknown type", type(data), data)
 
-    def send_to_all(self, data):
-        for client in self.clients:
-            self.send(client, data)
+    def send_json(self, data, client=None):
+        data = json.dumps(data, sort_keys=True, indent=4)
+        self.send(data, client=client)
 
 
 class WebSocketEntryPoint(HTTPHandler):
-    def prepare(self, headers):
-        key = self.request.header.get_webSocket_upgrade()
+    def prepare(self):
+        key = self.header.get_webSocket_upgrade()
         room = self.get_webSocket_room()
         if key or room is None:
             print(key, room)
@@ -149,6 +153,6 @@ class WebSocketEntryPoint(HTTPHandler):
 
         key = webSocket_process_key(key)
 
-        self.request.upgrade(WebSocketClient(self.request, room))
+        self.upgrade(WebSocketClient(self.header, self.connection, room))
 
         return self.response.upgrade_webSocket(key)

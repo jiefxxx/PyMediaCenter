@@ -10,6 +10,11 @@ class HTTPHeader:
         self.protocol = None
         self.fields = HTTPFields()
 
+    def is_valid(self):
+        if self.url and self.query and self.protocol:
+            return True
+        return False
+
     def get_upgrade(self):
         if not self.fields.get("Connection") == "Upgrade":
             return None

@@ -1,4 +1,5 @@
 #! python3
+import asyncio
 
 import tmdbsimple as tmdb
 
@@ -6,13 +7,15 @@ from daemon_lib.db_scripts import DBUpdateScripts
 from daemon_lib.http_handlers import MovieHandler, GenreHandler, VideoHandler, UploadHandler, ScriptHandler
 from daemon_lib.db_description import database_description
 from common_lib.config import ConfigMananger
+from daemon_lib.ws_room import ScriptsRoom
 
 from pydbm import DataBase
 
 from pynet.http.server import HTTPServer
-from pynet.network import MainServer, init_serverSock
 
 import sys
+
+from pythread import close_all_mode
 
 if len(sys.argv) > 1:
     config_path = sys.argv[1]
@@ -32,14 +35,15 @@ config.save()
 
 database = DataBase(config.get("database.path"))
 database.create(database_description)
-database_scripts = DBUpdateScripts()
+scripts_room = ScriptsRoom()
+database_scripts = DBUpdateScripts(scripts_room)
 
 tmdb.API_KEY = config.get("tmdb.api_key")
 
 
-ms = MainServer()
+_loop = asyncio.get_event_loop()
+http_server = HTTPServer(_loop)
 
-http_server = HTTPServer()
 
 http_server.add_user_data("database", database)
 http_server.add_user_data("config", config)
@@ -47,14 +51,19 @@ http_server.add_user_data("config", config)
 http_server.add_route("/movie/?([^/]*)/?", MovieHandler)
 http_server.add_route("/genre", GenreHandler)
 http_server.add_route("/video/?([^/]*)/?([^/]*)", VideoHandler)
-http_server.add_route("/scripts/?([^/]*)", ScriptHandler, user_data={"scripts": database_scripts})
+http_server.add_route("/scripts/?([^/]*)", ScriptHandler, ws=scripts_room, user_data={"scripts": database_scripts})
 http_server.add_route("/upload", UploadHandler)
 
-ms.add_socket(init_serverSock(4242), http_server)
-
+http_server.initialize()
+_loop.set_debug(False)
 try:
-    while True:
-        ms.run_once()
+    _loop.run_forever()
 except KeyboardInterrupt:
-    ms.close()
-    database_scripts.close()
+    pass
+
+# Close the server
+http_server.close()
+_loop.close()
+database_scripts.close()
+close_all_mode()
+

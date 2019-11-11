@@ -13,12 +13,12 @@ from pynet.http.websocket import webSocket_process_key, WebSocketClient
 
 
 class ScriptHandler(HTTPHandler):
-    def prepare(self, header):
-        key = self.request.header.get_webSocket_upgrade()
+    def prepare(self):
+        key = self.header.get_webSocket_upgrade()
 
         if key is not None:     # if webSocket upgrade is true
             key = webSocket_process_key(key)
-            self.request.upgrade(WebSocketClient(self.request, self.get_webSocket_room()))
+            self.upgrade(WebSocketClient(self.header, self.connection, self.get_webSocket_room()))
             return self.response.upgrade_webSocket(key)
 
         return HTTP_CONNECTION_CONTINUE
@@ -40,16 +40,16 @@ class ScriptHandler(HTTPHandler):
 
 
 class UploadHandler(HTTPHandler):
-    def prepare(self, headers):
+    def prepare(self):
         cm = self.user_data["config"]
 
-        self.user_data["media_type"] = int(headers.url.get("media_type", default=0))
+        self.user_data["media_type"] = int(self.header.url.get("media_type", default=0))
         if self.user_data["media_type"] == MEDIA_TYPE_MOVIE:
-            approximated_size = int(headers.fields.get("Content-Length", default=0))
+            approximated_size = int(self.header.fields.get("Content-Length", default=0))
             base_paths = cm.get("videos.movies.path")
             for path in base_paths:
                 if check_for_space(path, approximated_size):
-                    self.data = StreamingFormDataParser(headers={'Content-Type': headers.fields.get("Content-Type")})
+                    self.data = StreamingFormDataParser(headers={'Content-Type': self.header.fields.get("Content-Type")})
                     self.user_data["file"] = FileTarget(path+"/temporary."+str(time.time())+".movie")
                     self.user_data["json"] = ValueTarget()
                     self.data.register('video', self.user_data["file"])
