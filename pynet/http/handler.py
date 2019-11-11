@@ -1,3 +1,6 @@
+import sys
+import traceback
+
 from pynet.http.data import HTTPData
 from pynet.http.tools import HTTP_CONNECTION_ABORT, HTTP_CONNECTION_CONTINUE
 
@@ -21,7 +24,16 @@ class HTTPHandler:
         self.data.feed(data_chunk)
 
     def execute_request(self):
+        try:
+            self._execute_request()
+        except Exception as e:
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            traceback.print_exception(exc_type, exc_value, exc_traceback,
+                                      file=sys.stdout)
+            print(e)
+            self.response.send_error(500)
 
+    def _execute_request(self):
         if self.request.header.query == "GET":
 
             self.GET(self.request.header.url, *self.user_data["#regex_data"])
