@@ -83,7 +83,7 @@ class MovieModel(ThreadMananger, ModelTableListDict):
         for key in self.get_keys():
             requested_key += key+","
         requested_key = requested_key[:-1]
-        response = requests.get('http://192.168.1.55:4242/movie?'+requested_key)
+        response = requests.get('http://192.168.1.55:4242/movie?columns='+requested_key)
         if response.status_code == 200:
             data = response.json()
             self.reset_data(data)
