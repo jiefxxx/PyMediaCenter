@@ -1,8 +1,12 @@
 import json
 import os
+import sys
 import time
+from pathlib import Path
 
 import requests
+from PyQt5.QtCore import QVariant, QSize, Qt, pyqtSignal
+from PyQt5.QtGui import QIcon, QPixmap
 from requests_toolbelt.multipart.encoder import MultipartEncoderMonitor
 from PyQt5.QtWidgets import QFileDialog
 
@@ -13,9 +17,125 @@ from mediaCenter_lib.base_model import ModelTableListDict
 from pythread.threadMananger import ThreadMananger, threadedFunction
 
 
-class TmdbModel(ModelTableListDict, ThreadMananger):
+class GenreModel(ThreadMananger, ModelTableListDict):
+    refreshed = pyqtSignal()
+
+    def __init__(self, parent):
+        ThreadMananger.__init__(self, 1, name="Genre", debug=False)
+        ModelTableListDict.__init__(self, [("Name", "name", False),
+                                           ("ID", "id", False)],
+                                    parent)
+        self.refresh()
+
+    def refresh(self):
+        response = requests.get('http://192.168.1.55:4242/genre')
+        if response.status_code == 200:
+            data = [{"name": "Tous", "id": 0}]
+            data += response.json()
+            self.reset_data(data)
+            self.refreshed.emit()
+
+
+class MovieModel(ThreadMananger, ModelTableListDict):
+    refreshed = pyqtSignal()
+
+    def __init__(self, parent):
+        ThreadMananger.__init__(self, 2, name="movie", debug=False)
+        ModelTableListDict.__init__(self, [("Title", "title", False),
+                                           ("Original Title", "original_title", False),
+                                           ("Video ID", "video_id", False),
+                                           ("Genre ID", "genre_ids", False),
+                                           ("Duration", "duration", False),
+                                           ("Release date", "release_date", False),
+                                           ("Vote", "vote_average", False),
+                                           ("Poster", "poster_path")], parent)
+
+        if sys.platform.startswith('linux'):
+            self.app_data_path = str(Path.home())+"/.pymediacenter"
+        elif sys.platform == "win32":
+            self.app_data_path = os.path.expandvars(r'%LOCALAPPDATA%')+"/pymediacenter"
+        else:
+            raise Exception("unknow système")
+
+        poster_path = self.app_data_path + "/poster"
+
+        self.poster_mini_path = poster_path + "/mini"
+        self.poster_original_path = poster_path + "/original"
+
+        if not os.path.exists(self.app_data_path):
+            print("Create ", self.app_data_path)
+            os.mkdir(self.app_data_path)
+        if not os.path.exists(poster_path):
+            print("Create ", poster_path)
+            os.mkdir(poster_path)
+        if not os.path.exists(self.poster_mini_path):
+            print("Create ", self.poster_mini_path)
+            os.mkdir(self.poster_mini_path)
+        if not os.path.exists(self.poster_original_path):
+            print("Create ", self.poster_original_path)
+            os.mkdir(self.poster_original_path)
+
+        self.refresh()
+
+    @threadedFunction()
+    def refresh(self):
+        requested_key = ""
+        for key in self.get_keys():
+            requested_key += key+","
+        requested_key = requested_key[:-1]
+        response = requests.get('http://192.168.1.55:4242/movie?'+requested_key)
+        if response.status_code == 200:
+            data = response.json()
+            self.reset_data(data)
+        self.refreshed.emit()
+
+    def get_decoration_role(self, index):
+        if index.column() == 0:
+            if self.poster_exists(self.list[index.row()]["poster_path"]):
+                return QIcon(QPixmap(self.get_poster_path(self.list[index.row()]["poster_path"], mini=True)))
+            else:
+                return QIcon(QPixmap("rsc/404.jpg"))
+        return QVariant()
+
+    def get_poster_path(self, poster_path, mini=False):
+        if mini:
+            return self.poster_mini_path + poster_path
+        else:
+            return self.poster_original_path + poster_path
+
+    def poster_exists(self, poster_path):
+        if poster_path is None:
+            return False
+        if not os.path.exists(self.get_poster_path(poster_path, mini=True)):
+            self.get_poster(poster_path)
+            return False
+        if not os.path.exists(self.get_poster_path(poster_path)):
+            self.get_poster(poster_path)
+            return False
+        return True
+
+    @threadedFunction()
+    def get_poster(self, poster_path):
+        print("get poster", poster_path)
+        if poster_path is None:
+            return
+        original_path = self.poster_original_path + poster_path
+        mini_path = self.poster_mini_path + poster_path
+
+        if not os.path.exists(original_path) or not os.path.exists(mini_path):
+
+            response = requests.get("https://image.tmdb.org/t/p/original" + poster_path, stream=True)
+            if response.status_code == 200:
+                with open(original_path, 'wb') as f:
+                    for chunk in response:
+                        f.write(chunk)
+                pixmap = QPixmap(original_path).scaled(QSize(154, 231), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                pixmap.save(mini_path, "JPG")
+
+
+class TmdbModel(ThreadMananger, ModelTableListDict):
     def __init__(self, api_key, parent):
-        ThreadMananger.__init__(self, 1, debug=False)
+        ThreadMananger.__init__(self, 1, name="tmdb", debug=False)
         ModelTableListDict.__init__(self, [("Title", "title", False),
                                            ("Release date", "release_date", False)], parent)
         self.search = SearchMovie(api_key)
@@ -32,9 +152,9 @@ class TmdbModel(ModelTableListDict, ThreadMananger):
         self.close()
 
 
-class UploadVideoModel(ModelTableListDict, ThreadMananger):
+class UploadVideoModel(ThreadMananger, ModelTableListDict):
     def __init__(self, parent):
-        ThreadMananger.__init__(self, 1, debug=False)
+        ThreadMananger.__init__(self, 1, name="upload", debug=False)
         ModelTableListDict.__init__(self, [("Path", "path", False),
                                            ("Size", "size", False),
                                            ("Edited", "edited", False),
@@ -74,7 +194,7 @@ class UploadVideoModel(ModelTableListDict, ThreadMananger):
         self._status(index, "Queued")
         self.threaded_send(index)
 
-    @threadedFunction(0)
+    @threadedFunction()
     def threaded_send(self, index):
         self.begin_busy()
         video = self.data(index)

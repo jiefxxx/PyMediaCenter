@@ -1,25 +1,23 @@
 import unicodedata
 
-from PyQt5.QtCore import Qt, QAbstractListModel, QVariant, QModelIndex, QSize, QSortFilterProxyModel, pyqtSignal
-from PyQt5.QtGui import QIcon, QPixmap
-from PyQt5.QtWidgets import QListView, QWidget, QHBoxLayout, QVBoxLayout, \
-    QLineEdit, QComboBox, QCheckBox
+from PyQt5.QtCore import Qt, QSize, QSortFilterProxyModel
+from PyQt5.QtWidgets import QListView, QWidget, QHBoxLayout, QVBoxLayout, QLineEdit, QComboBox, QCheckBox
 
 from mediaCenter_lib.gui.widget import QIconButton
+from mediaCenter_lib.model import MovieModel, GenreModel
 
 
 class Movies(QWidget):
     def __init__(self, parent, callback=None):
         QWidget.__init__(self, parent)
-        self.root = self.parent().root
 
         self.callback = callback
 
         main_vbox = QVBoxLayout(self)
         self.top_hbox = QHBoxLayout(self)
 
-        self.model = MoviesModel(self)
-        self.model_genre = GenresModel(self)
+        self.model = self.window().get_model("movie")
+        self.model.refreshed.connect(self.on_movie_refreshed)
 
         self.proxy = SortProxy(self)
         self.proxy.setSourceModel(self.model)
@@ -42,6 +40,8 @@ class Movies(QWidget):
         self.check_reverse.stateChanged.connect(self.on_sort_reverse)
 
         self.combo_genre = QComboBox(self)
+        self.model_genre = self.window().get_model("genre")
+        self.model_genre.refreshed.connect(self.on_genre_refreshed)
         self.combo_genre.setModel(self.model_genre)
         self.combo_genre.setSizeAdjustPolicy(QComboBox.AdjustToContents)
         self.combo_genre.currentIndexChanged.connect(self.on_genre_combo)
@@ -59,6 +59,12 @@ class Movies(QWidget):
         main_vbox.addWidget(self.movie_list)
 
         self.setLayout(main_vbox)
+
+    def on_genre_refreshed(self):
+        self.combo_genre.setCurrentIndex(self.combo_genre.findText("Tous"))
+
+    def on_movie_refreshed(self):
+        self.refresh_button.setStyleSheet("")
 
     def on_refresh(self):
         self.refresh_button.setStyleSheet("QIconButton{background-color: rgba(255, 255, 255, 50);}")
@@ -144,7 +150,7 @@ class SortProxy(QSortFilterProxyModel):
 
     def lessThan(self, left_index, right_index):
 
-        left_data  = self.sourceModel().data(left_index)
+        left_data = self.sourceModel().data(left_index)
         right_data = self.sourceModel().data(right_index)
 
         return left_data[self.sort_key] < right_data[self.sort_key]
@@ -160,88 +166,6 @@ class SortProxy(QSortFilterProxyModel):
             return filter_by_string(data, "original_title", self.filter_string)
 
         return True
-
-
-class GenresModel(QAbstractListModel):
-    signal = pyqtSignal('PyQt_PyObject')
-
-    def __init__(self, parent=None, *args):
-        QAbstractListModel.__init__(self, parent)
-        self.list_data = []
-        self.list_data.append({"name": "Tous", "id": 0})
-        self.refresh()
-
-    def refresh(self):
-        self.signal.connect(self.on_data)
-        self.parent().window().root.get_genres(self.signal)
-
-    def on_data(self, data):
-        self.beginResetModel()
-        self.list_data = []
-        self.list_data.append({"name": "Tous", "id": 0})
-        self.list_data += data
-        self.endResetModel()
-        self.parent().combo_genre.setCurrentIndex(self.parent().combo_genre.findText("Tous"))
-
-    def rowCount(self, parent=QModelIndex()):
-        return len(self.list_data)
-
-    def data(self, index, role=None):
-        try:
-            if index.isValid() and role == Qt.DisplayRole:
-                return QVariant(self.list_data[index.row()]["name"])
-            if index.isValid() and role is None:
-                return self.list_data[index.row()]
-            else:
-                return QVariant()
-        except TypeError:
-            return QVariant()
-
-
-class MoviesModel(QAbstractListModel):
-    signal = pyqtSignal('PyQt_PyObject')
-    signal_poster = pyqtSignal()
-
-    def __init__(self, parent=None, *args):
-        QAbstractListModel.__init__(self, parent)
-        self.listdata = []
-        self.refresh()
-        self.signal.connect(self.on_data)
-        self.signal_poster.connect(self.on_poster)
-
-    def refresh(self):
-        self.parent().root.get_movies(self.signal)
-
-    def on_data(self, data):
-        self.beginResetModel()
-        self.listdata = data
-        self.endResetModel()
-        self.parent().refresh_button.setStyleSheet("")
-
-    def on_poster(self):
-        self.beginResetModel()
-        self.endResetModel()
-
-    def rowCount(self, parent=QModelIndex()):
-        return len(self.listdata)
-
-    def data(self, index, role=None):
-        try:
-            if index.isValid() and role == Qt.DecorationRole:
-                if self.parent().root.poster_exists(self.listdata[index.row()]["poster_path"]):
-                    return QIcon(QPixmap(self.parent().root.get_poster_path(self.listdata[index.row()]["poster_path"],
-                                                                            mini=True)))
-                else:
-                    return QIcon(QPixmap("rsc/404.jpg"))
-
-            if index.isValid() and role == Qt.DisplayRole:
-                return QVariant(self.listdata[index.row()]["title"])
-            if index.isValid() and role is None:
-                return self.listdata[index.row()]
-            else:
-                return QVariant()
-        except TypeError:
-            return QVariant()
 
 
 class MoviesList(QListView):

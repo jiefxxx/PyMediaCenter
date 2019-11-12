@@ -10,6 +10,7 @@ class ModelTableListDict(QAbstractTableModel):
     busy = pyqtSignal('PyQt_PyObject')
 
     def __init__(self, list_key, parent):
+
         QAbstractTableModel.__init__(self, parent)
         self.list = []
         self.list_key = list_key
@@ -37,6 +38,9 @@ class ModelTableListDict(QAbstractTableModel):
             if role == Qt.DisplayRole:
                 key = self.get_key(index.column())
                 return QVariant(str(self.list[index.row()][key]))
+
+            elif role == Qt.DecorationRole:
+                return self.get_decoration_role(index)
 
             elif role is None:
                 return self.list[index.row()]
@@ -103,6 +107,9 @@ class ModelTableListDict(QAbstractTableModel):
 
     # start custom function
 
+    def get_decoration_role(self, index):
+        return QVariant()
+
     def clear(self):
         self.removeRows(0, self.rowCount())
 
@@ -122,8 +129,15 @@ class ModelTableListDict(QAbstractTableModel):
     def get_key(self, column, role=DICT_KEY):
         return self.list_key[column][role]
 
+    def get_keys(self, role=DICT_KEY):
+        for i in range(0, len(self.list_key)):
+            yield self.get_key(i, role=role)
+
     def begin_busy(self):
         self.busy.emit(True)
 
     def end_busy(self):
         self.busy.emit(False)
+
+    def refresh(self):
+        pass

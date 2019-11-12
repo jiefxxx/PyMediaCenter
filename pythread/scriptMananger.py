@@ -3,7 +3,7 @@ from pythread.threadMananger import ThreadMananger
 
 class Scripts(ThreadMananger):
     def __init__(self):
-        ThreadMananger.__init__(self)
+        ThreadMananger.__init__(self, 1)
         self.script_name = None
         self.progress = 0.0
         self.string = ""

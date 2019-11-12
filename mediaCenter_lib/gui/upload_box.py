@@ -40,7 +40,7 @@ class UploadBox(QWidget):
         self.hbox.addWidget(self.send_button)
 
         self.table = QTableView(self)
-        self.model = UploadVideoModel(self.table)
+        self.model = self.window().get_model("upload")
         self.table.setModel(self.model)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.table.horizontalHeader().setMaximumSectionSize(700)

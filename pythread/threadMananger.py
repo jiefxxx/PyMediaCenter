@@ -7,7 +7,7 @@ import types
 Lock = threading.Lock
 
 class Thread(threading.Thread):
-    def __init__(self,**kwargs):
+    def __init__(self, **kwargs):
         self.debug = False
         threading.Thread.__init__(self,**kwargs)
         self.queue = queue.Queue()
@@ -17,6 +17,7 @@ class Thread(threading.Thread):
         self.queue = queue
 
     def run(self):
+        print("start thread " + self.getName())
         while True:
             data = self.queue.get()
             if data is None:
@@ -94,15 +95,18 @@ def lockedGenerator():
         return wrapper
     return decorated
 
+
 class ThreadMananger():
-    def __init__(self,nbr_thread=1,debug=False,one_queue=False):
+    def __init__(self, nbr_thread, name=None, debug=False, one_queue=False):
         self.list_thread = []
         self.i = 0
         self.one_queue = one_queue
+        if name is None:
+            name = type(self).__name__
         if self.one_queue:
             self.main_queue = queue.queue()
-        for i in range(0,nbr_thread):
-            t = Thread(name="Thread "+str(i))
+        for i in range(0, nbr_thread):
+            t = Thread(name=name+" "+str(i))
             t.debug = debug
             if one_queue:
                 t.queue = self.main_queue

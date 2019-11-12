@@ -73,3 +73,6 @@ class HTTPServer(TcpServerHandler, ThreadMananger):
         if ws is not None:
             user_data["ws_room"] = ws
         self.route.append((reg_path, handler, user_data))
+
+    def close(self):
+        ThreadMananger.close(self)
