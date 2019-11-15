@@ -14,19 +14,19 @@ from common_lib.config import MEDIA_TYPE_MOVIE
 from common_lib.fct import convert_size
 from common_lib.videos_info import SearchMovie
 from mediaCenter_lib.base_model import ModelTableListDict
-from pythread.threadMananger import ThreadMananger, threadedFunction
+from pythread import threaded
 
 
-class GenreModel(ThreadMananger, ModelTableListDict):
+class GenreModel(ModelTableListDict):
     refreshed = pyqtSignal()
 
     def __init__(self, parent):
-        ThreadMananger.__init__(self, 1, name="Genre", debug=False)
         ModelTableListDict.__init__(self, [("Name", "name", False),
                                            ("ID", "id", False)],
                                     parent)
         self.refresh()
 
+    @threaded("httpCom")
     def refresh(self):
         response = requests.get('http://192.168.1.55:4242/genre')
         if response.status_code == 200:
@@ -36,11 +36,10 @@ class GenreModel(ThreadMananger, ModelTableListDict):
             self.refreshed.emit()
 
 
-class MovieModel(ThreadMananger, ModelTableListDict):
+class MovieModel(ModelTableListDict):
     refreshed = pyqtSignal()
 
     def __init__(self, parent):
-        ThreadMananger.__init__(self, 2, name="movie", debug=False)
         ModelTableListDict.__init__(self, [("Title", "title", False),
                                            ("Original Title", "original_title", False),
                                            ("Video ID", "video_id", False),
@@ -77,7 +76,7 @@ class MovieModel(ThreadMananger, ModelTableListDict):
 
         self.refresh()
 
-    @threadedFunction()
+    @threaded("httpCom")
     def refresh(self):
         requested_key = ""
         for key in self.get_keys():
@@ -114,7 +113,7 @@ class MovieModel(ThreadMananger, ModelTableListDict):
             return False
         return True
 
-    @threadedFunction()
+    @threaded("poster")
     def get_poster(self, poster_path):
         print("get poster", poster_path)
         if poster_path is None:
@@ -133,14 +132,13 @@ class MovieModel(ThreadMananger, ModelTableListDict):
                 pixmap.save(mini_path, "JPG")
 
 
-class TmdbModel(ThreadMananger, ModelTableListDict):
+class TmdbModel(ModelTableListDict):
     def __init__(self, api_key, parent):
-        ThreadMananger.__init__(self, 1, name="tmdb", debug=False)
         ModelTableListDict.__init__(self, [("Title", "title", False),
                                            ("Release date", "release_date", False)], parent)
         self.search = SearchMovie(api_key)
 
-    @threadedFunction(0)
+    @threaded("httpCom")
     def on_search(self, text, year=None):
         self.begin_busy()
         self.clear()
@@ -148,13 +146,9 @@ class TmdbModel(ThreadMananger, ModelTableListDict):
             self.add_data(movie)
         self.end_busy()
 
-    def __del__(self):
-        self.close()
 
-
-class UploadVideoModel(ThreadMananger, ModelTableListDict):
+class UploadVideoModel(ModelTableListDict):
     def __init__(self, parent):
-        ThreadMananger.__init__(self, 1, name="upload", debug=False)
         ModelTableListDict.__init__(self, [("Path", "path", False),
                                            ("Size", "size", False),
                                            ("Edited", "edited", False),
@@ -194,7 +188,7 @@ class UploadVideoModel(ThreadMananger, ModelTableListDict):
         self._status(index, "Queued")
         self.threaded_send(index)
 
-    @threadedFunction()
+    @threaded("upload")
     def threaded_send(self, index):
         self.begin_busy()
         video = self.data(index)
@@ -237,6 +231,3 @@ class UploadVideoModel(ThreadMananger, ModelTableListDict):
         else:
             self._status(path, "Invalid data")
         self.end_busy()
-
-    def __del__(self):
-        self.close()

@@ -57,5 +57,4 @@ try:
         ms.run_once()
 except KeyboardInterrupt:
     ms.close()
-    database.close()
     database_scripts.close()

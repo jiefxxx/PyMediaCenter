@@ -4,7 +4,10 @@ from pynet.http.handler import HTTP404Handler
 from pynet.http.request import HTTPRequest
 from pynet.http.tools import HTTP_CONNECTION_ABORT, HTTP_CONNECTION_CONTINUE, HTTP_CONNECTION_UPGRADE
 from pynet.network import TcpHandler, TcpServerHandler
-from pythread.threadMananger import ThreadMananger, threadedFunction
+from pythread import create_new_mode, threaded, close_mode
+from pythread.modes import ProcessMode
+
+
 
 
 class HTTPConnection(TcpHandler):
@@ -38,14 +41,14 @@ class HTTPConnection(TcpHandler):
                 return
 
 
-class HTTPServer(TcpServerHandler, ThreadMananger):
+class HTTPServer(TcpServerHandler):
     def __init__(self):
+        create_new_mode(ProcessMode, "httpServer", size=5)
         TcpServerHandler.__init__(self, HTTPConnection)
-        ThreadMananger.__init__(self, nbr_thread=5)
         self.route = []
         self.user_data = {}
 
-    @threadedFunction()
+    @threaded("httpServer")
     def execute_request(self, request):
         request.handler.execute_request()
         request.close()
@@ -75,4 +78,4 @@ class HTTPServer(TcpServerHandler, ThreadMananger):
         self.route.append((reg_path, handler, user_data))
 
     def close(self):
-        ThreadMananger.close(self)
+        close_mode("httpServer")

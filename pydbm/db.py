@@ -1,5 +1,7 @@
 import sqlite3
-from pythread.threadMananger import ThreadMananger, threadedFunction, sequesterFunction
+
+from pythread import create_new_mode, threaded
+from pythread.modes import ProcessMode
 
 
 def dict_filter(old_dict, keys):
@@ -17,9 +19,8 @@ def merge_dicts(*dict_args):
     return result
 
 
-class DataBase(ThreadMananger):
+class DataBase:
     def __init__(self, path):
-        ThreadMananger.__init__(self, nbr_thread=1)
         self.db = None
         self.db_description = None
         self.initialize_db(path)
@@ -58,12 +59,10 @@ class DataBase(ThreadMananger):
                 return table_description
         return None
 
-    @threadedFunction()
     def initialize_db(self, path):
-        self.db = sqlite3.connect(path)
+        self.db = sqlite3.connect(path, check_same_thread=False)
         self.db.row_factory = lambda C, R: {c[0]: R[i] for i, c in enumerate(C.description)}
 
-    @sequesterFunction()
     def select_rows(self, table, columns=None, where=None, joins=None):
         if columns is None: columns = ["*"]
         if where is None:  where = {}
@@ -87,7 +86,6 @@ class DataBase(ThreadMananger):
                 yield row
         self.db.commit()
 
-    @threadedFunction()
     def update_row(self, table, row_data):
         data = []
 
@@ -106,7 +104,6 @@ class DataBase(ThreadMananger):
             c.execute(script, tuple(data))
         self.db.commit()
 
-    @threadedFunction()
     def delete_row(self, table, where):
         data = []
 
@@ -119,7 +116,6 @@ class DataBase(ThreadMananger):
             c.execute(script, tuple(data))
         self.db.commit()
 
-    @threadedFunction()
     def create_table(self, table, constructor):
         script = "create table if not exists "
         script += table + " ("

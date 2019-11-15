@@ -9,6 +9,8 @@ from mediaCenter_lib.gui.mediaplayer import MediaPlayer
 from mediaCenter_lib.gui.movies import Movies
 from mediaCenter_lib.gui.upload_box import UploadBox
 from mediaCenter_lib.model import GenreModel, MovieModel, UploadVideoModel
+from pythread import create_new_mode, close_all_mode
+from pythread.modes import ProcessMode
 
 
 class MainWindow(QMainWindow):
@@ -52,10 +54,6 @@ class MainWindow(QMainWindow):
                 return model
         raise Exception("Model "+name+" not found")
 
-    def close(self):
-        for _, model in self.models:
-            model.close()
-
     def test(self, movie):
         print("http://192.168.1.55:4242/video/" + str(movie["video_id"]) + "/stream")
         self.media_player.load("http://192.168.1.55:4242/video/" + str(movie["video_id"]) + "/stream")
@@ -82,11 +80,15 @@ class MainWindow(QMainWindow):
                 self.showFullScreen()
 
 
+create_new_mode(ProcessMode, "httpCom", size=4, debug=True)
+create_new_mode(ProcessMode, "poster", size=2, debug=True)
+create_new_mode(ProcessMode, "upload", size=1, debug=True)
 
 app = QApplication(sys.argv)
 window = MainWindow()
 window.showMaximized()
 app.exec_()
 app.closingDown()
-window.close()
+
+close_all_mode()
 

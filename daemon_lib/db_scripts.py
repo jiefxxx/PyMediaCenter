@@ -1,6 +1,6 @@
 from common_lib.config import MEDIA_TYPE_UNKNOWN, MEDIA_TYPE_MOVIE, MEDIA_TYPE_TV
 from pynet.http.handler import HTTPHandler
-from pythread.scriptMananger import Scripts
+from pythread.scripts import Scripts
 from common_lib.videos_info import SearchMovie, get_video_info, get_videos, get_genres
 
 

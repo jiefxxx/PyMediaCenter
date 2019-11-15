@@ -5,7 +5,7 @@ import struct
 from pynet.http.tools import HTTP_CONNECTION_ABORT, HTTP_CONNECTION_UPGRADE
 
 from pynet.http.handler import HTTPHandler
-from pythread.threadMananger import ThreadMananger, threadedFunction
+from pythread import threaded
 
 
 def webSocket_parse(data):
@@ -87,19 +87,18 @@ class WebSocketClient:
         self.send(1, 2, binary)
 
 
-class WebSocketRoom(ThreadMananger):
+class WebSocketRoom:
     def __init__(self, name=None):
-        ThreadMananger.__init__(self, nbr_thread=1)
         self.clients = []
         self.name = name
 
-    @threadedFunction()
+    @threaded("httpServer")
     def new_client(self, client):
         if client not in self.clients:
             self.clients.append(client)
             self.on_new(client)
 
-    @threadedFunction()
+    @threaded("httpServer")
     def exec_message(self, client, message):
         if client not in self.clients:
             raise Exception("client unknown")
