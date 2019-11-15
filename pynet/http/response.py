@@ -4,7 +4,7 @@ import time
 
 import magic
 from pynet.http.header import HTTPFields
-from pynet.http.tools import http_code_to_string, chunk
+from pynet.http.tools import http_code_to_string, chunk, HTTP_CONNECTION_UPGRADE
 
 
 class HTTPResponse:
@@ -20,6 +20,17 @@ class HTTPResponse:
         ret += str(self.fields)
         ret += "\r\n"
         return ret
+
+    def upgrade(self, name):
+        self.fields.set("Connection", "Upgrade")
+        self.fields.set("Upgrade", name)
+
+    def upgrade_webSocket(self, key):
+        self.upgrade("websocket")
+        self.fields.set("Sec-WebSocket-Accept", key.decode())
+        self.send_text(101, "")
+        return HTTP_CONNECTION_UPGRADE
+
 
     def send_text(self, code, data=None, content_type="text/text"):
         self.code = code

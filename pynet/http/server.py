@@ -74,7 +74,7 @@ class HTTPServer(TcpServerHandler):
         if not user_data:
             user_data = {}
         if ws is not None:
-            user_data["ws_room"] = ws
+            user_data["#ws_room"] = ws
         self.route.append((reg_path, handler, user_data))
 
     def close(self):

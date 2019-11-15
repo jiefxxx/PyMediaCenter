@@ -9,6 +9,10 @@ class HTTPRequest:
         self.handler = None
         self.header_completed = False
         self.prepare_return = -1
+        self.upgrade_client = None
+
+    def upgrade(self, client):
+        self.upgrade_client = client
 
     def feed(self, data):
         while b'\r\n' in data and not self.header_completed:

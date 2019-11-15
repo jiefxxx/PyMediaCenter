@@ -73,18 +73,4 @@ class DBUpdateScripts(Scripts):
                     db.set("videos", video)
 
 
-class ScriptHandler(HTTPHandler):
-    def GET(self, url, script_name):
-        scripts = self.user_data["scripts"]
-        cm = self.user_data["config"]
-        db = self.user_data["database"]
-        if script_name is None:
-            return self.response.send_error(404)
 
-        if script_name == "state":
-            return self.response.send_json(200, scripts.get_state())
-
-        if scripts.start_script(script_name, db, cm):
-            return self.response.send_text(200, "ok")
-
-        return self.response.send_error(404)

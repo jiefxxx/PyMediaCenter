@@ -8,6 +8,11 @@ from pynet.http.handler import HTTPHandler
 from pythread import threaded
 
 
+def webSocket_process_key(key):
+    combined = key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+    return base64.b64encode(hashlib.sha1(combined.encode()).digest())
+
+
 def webSocket_parse(data):
     opcode, data = int.from_bytes(data[:1], byteorder='big'), data[1:]
     fin = (int(0xF0) & opcode) >> 7
@@ -136,21 +141,14 @@ class WebSocketRoom:
 
 class WebSocketEntryPoint(HTTPHandler):
     def prepare(self, headers):
-        if not self.request.header.fields.get("Connection") == "Upgrade":
+        key = self.request.header.get_webSocket_upgrade()
+        room = self.get_webSocket_room()
+        if key or room is None:
+            print(key, room)
             return HTTP_CONNECTION_ABORT
-        if not self.request.header.fields.get("Upgrade") == "websocket":
-            return HTTP_CONNECTION_ABORT
 
-        key = self.request.header.fields.get("Sec-WebSocket-Key")
-        version = self.request.header.fields.get("Sec-WebSocket-Version")
+        key = webSocket_process_key(key)
 
-        combined = key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
-        key_rep = base64.b64encode(hashlib.sha1(combined.encode()).digest())
-        self.request.upgrade_client = WebSocketClient(self.request, self.user_data["ws_room"])
+        self.request.upgrade(WebSocketClient(self.request, room))
 
-        self.response.fields.set("Upgrade", "websocket")
-        self.response.fields.set("Connection", "Upgrade")
-        self.response.fields.set("Sec-WebSocket-Accept", key_rep.decode())
-        self.response.send_text(101, "")
-
-        return HTTP_CONNECTION_UPGRADE
+        return self.response.upgrade_webSocket(key)

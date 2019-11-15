@@ -14,6 +14,9 @@ class HTTPHandler:
         self.dead = False
         self.data = None
 
+    def get_webSocket_room(self):
+        return self.user_data.get("#ws_room")
+
     def prepare(self, header):
         content_length = int(header.fields.get("Content-Length", default='0'))
         if content_length > 0:

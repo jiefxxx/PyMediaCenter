@@ -2,8 +2,8 @@
 
 import tmdbsimple as tmdb
 
-from daemon_lib.db_scripts import DBUpdateScripts, ScriptHandler
-from daemon_lib.http_handlers import MovieHandler, GenreHandler, VideoHandler, UploadHandler
+from daemon_lib.db_scripts import DBUpdateScripts
+from daemon_lib.http_handlers import MovieHandler, GenreHandler, VideoHandler, UploadHandler, ScriptHandler
 from daemon_lib.db_description import database_description
 from common_lib.config import ConfigMananger
 
@@ -47,7 +47,7 @@ http_server.add_user_data("config", config)
 http_server.add_route("/movie/?([^/]*)/?", MovieHandler)
 http_server.add_route("/genre", GenreHandler)
 http_server.add_route("/video/?([^/]*)/?([^/]*)", VideoHandler)
-http_server.add_route("/scripts/?([^/]*)", ScriptHandler, {"scripts": database_scripts})
+http_server.add_route("/scripts/?([^/]*)", ScriptHandler, user_data={"scripts": database_scripts})
 http_server.add_route("/upload", UploadHandler)
 
 ms.add_socket(init_serverSock(4242), http_server)

@@ -10,6 +10,16 @@ class HTTPHeader:
         self.protocol = None
         self.fields = HTTPFields()
 
+    def get_upgrade(self):
+        if not self.fields.get("Connection") == "Upgrade":
+            return None
+        return self.fields.get("Upgrade")
+
+    def get_webSocket_upgrade(self):
+        if not self.get_upgrade() == "websocket":
+            return None
+        return self.fields.get("Sec-WebSocket-Key")
+
     def parse_line(self, line):
         if self.query is None:
             self.query, url, self.protocol = http_parse_query(line)
