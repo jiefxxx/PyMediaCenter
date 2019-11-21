@@ -10,6 +10,7 @@ from PyQt5.QtGui import QIcon, QPixmap
 from requests_toolbelt.multipart.encoder import MultipartEncoderMonitor
 from PyQt5.QtWidgets import QFileDialog
 
+import pyconfig
 from common_lib.config import MEDIA_TYPE_MOVIE
 from common_lib.fct import convert_size
 from common_lib.videos_info import SearchMovie
@@ -136,13 +137,13 @@ class TmdbModel(ModelTableListDict):
     def __init__(self, api_key, parent):
         ModelTableListDict.__init__(self, [("Title", "title", False),
                                            ("Release date", "release_date", False)], parent)
-        self.search = SearchMovie(api_key)
+        self.search = SearchMovie(pyconfig.get("tmdb.api_key"))
 
     @threaded("httpCom")
     def on_search(self, text, year=None):
         self.begin_busy()
         self.clear()
-        for movie in self.search.search_movie(text, year):
+        for movie in self.search.search_movie(text, year, language=pyconfig.get("language")):
             self.add_data(movie)
         self.end_busy()
 

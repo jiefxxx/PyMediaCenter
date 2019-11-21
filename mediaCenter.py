@@ -12,6 +12,11 @@ from mediaCenter_lib.model import GenreModel, MovieModel, UploadVideoModel
 from pythread import create_new_mode, close_all_mode
 from pythread.modes import ProcessMode
 
+from common_lib.config import configure_callback
+import pyconfig
+
+pyconfig.load("pymediacenter", callback=configure_callback)
+
 
 class MainWindow(QMainWindow):
 

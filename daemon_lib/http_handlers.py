@@ -5,6 +5,7 @@ import time
 from streaming_form_data import StreamingFormDataParser
 from streaming_form_data.targets import FileTarget, ValueTarget
 
+import pyconfig
 from common_lib.config import MEDIA_TYPE_MOVIE
 from common_lib.videos_info import get_video_info, get_movie_info, get_normalized_file_name, check_for_space
 from pynet.http.handler import HTTPHandler
@@ -25,7 +26,6 @@ class ScriptHandler(HTTPHandler):
 
     def GET(self, url, script_name):
         scripts = self.user_data["scripts"]
-        cm = self.user_data["config"]
         db = self.user_data["database"]
         if script_name is None:
             return self.response.send_error(404)
@@ -33,7 +33,7 @@ class ScriptHandler(HTTPHandler):
         if script_name == "state":
             return self.response.send_json(200, scripts.get_state())
 
-        if scripts.start_script(script_name, db, cm):
+        if scripts.start_script(script_name, db):
             return self.response.send_text(200, "ok")
 
         return self.response.send_error(404)
@@ -41,12 +41,10 @@ class ScriptHandler(HTTPHandler):
 
 class UploadHandler(HTTPHandler):
     def prepare(self):
-        cm = self.user_data["config"]
-
         self.user_data["media_type"] = int(self.header.url.get("media_type", default=0))
         if self.user_data["media_type"] == MEDIA_TYPE_MOVIE:
             approximated_size = int(self.header.fields.get("Content-Length", default=0))
-            base_paths = cm.get("videos.movies.path")
+            base_paths = pyconfig.get("videos.movies.path")
             for path in base_paths:
                 if check_for_space(path, approximated_size):
                     self.data = StreamingFormDataParser(headers={'Content-Type': self.header.fields.get("Content-Type")})

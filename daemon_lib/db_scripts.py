@@ -1,5 +1,5 @@
+import pyconfig
 from common_lib.config import MEDIA_TYPE_UNKNOWN, MEDIA_TYPE_MOVIE, MEDIA_TYPE_TV
-from pynet.http.handler import HTTPHandler
 from pythread.scripts import Scripts
 from common_lib.videos_info import SearchMovie, get_video_info, get_videos, get_genres
 
@@ -24,16 +24,16 @@ class DBUpdateScripts(Scripts):
         Scripts.set_progress(self, progress, string)
         self.webSocket_send.send_json(self.get_state())
 
-    def update_genres(self, db, cm):
+    def update_genres(self, db):
         self.set_progress(0, "started")
-        for genre in get_genres(language=cm.get("language"), api_key=cm.get("tmdb.api_key")):
+        for genre in get_genres(language=pyconfig.get("language"), api_key=pyconfig.get("tmdb.api_key")):
             db.set("genres", genre)
         self.set_progress(1, "finish")
 
-    def update_videos_worker(self, paths, media_type, db, cm):
+    def update_videos_worker(self, paths, media_type, db):
         if not self.alive:
             return
-        for root_path in cm.get(paths):
+        for root_path in pyconfig.get(paths):
             videos = list(get_videos(root_path))
             size = len(videos)
             i = 0
@@ -46,16 +46,16 @@ class DBUpdateScripts(Scripts):
                     video = get_video_info(path, media_type)
                     db.set("videos", video)
 
-    def update_videos(self, db, cm):
+    def update_videos(self, db):
         self.set_progress(0, "started")
-        self.update_videos_worker("videos.downloads.path", MEDIA_TYPE_UNKNOWN, db, cm)
-        self.update_videos_worker("videos.movies.path", MEDIA_TYPE_MOVIE, db, cm)
-        self.update_videos_worker("videos.tvs.path", MEDIA_TYPE_TV, db, cm)
+        self.update_videos_worker("videos.downloads.path", MEDIA_TYPE_UNKNOWN, db)
+        self.update_videos_worker("videos.movies.path", MEDIA_TYPE_MOVIE, db)
+        self.update_videos_worker("videos.tvs.path", MEDIA_TYPE_TV, db)
         self.set_progress(1, "finish")
 
-    def update_movies(self, db, cm):
+    def update_movies(self, db):
         self.set_progress(0, "started")
-        search = SearchMovie(cm.get("tmdb.api_key"))
+        search = SearchMovie(pyconfig.get("tmdb.api_key"))
         videos = list(db.get("videos", where={"media_id": None, "media_type": MEDIA_TYPE_MOVIE}))
         size = len(videos)
         i = 0
@@ -66,7 +66,7 @@ class DBUpdateScripts(Scripts):
             self.set_progress(i/size, video["path"])
             movie_name, movie_year = parse_movie_name(video["path"])
             if movie_name is not None:
-                results = search.search_movie(movie_name, movie_year, language="fr")
+                results = search.search_movie(movie_name, movie_year, language=pyconfig.get("language")[:2])
                 movie_info = next(results, None)
                 if movie_info is not None:
                     print(video["path"], movie_info["title"])
