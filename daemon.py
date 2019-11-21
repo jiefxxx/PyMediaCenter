@@ -17,18 +17,7 @@ from pythread import close_all_mode
 from common_lib.config import configure_callback
 import pyconfig
 
-pyconfig.load("pymediacenter", callback=configure_callback)
-
-
-def set_proc_name(newname):
-    from ctypes import cdll, byref, create_string_buffer
-    libc = cdll.LoadLibrary('libc.so.6')
-    buff = create_string_buffer(len(newname)+1)
-    buff.value = newname
-    libc.prctl(15, byref(buff), 0, 0, 0)
-
-
-set_proc_name("pymediacenter_daemon")
+pyconfig.load("pymediacenter", proc_name="pymediacenter-daemon", callback=configure_callback)
 
 
 database = DataBase(pyconfig.get("database.path"))

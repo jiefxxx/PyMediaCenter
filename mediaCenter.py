@@ -15,7 +15,7 @@ from pythread.modes import ProcessMode
 from common_lib.config import configure_callback
 import pyconfig
 
-pyconfig.load("pymediacenter", callback=configure_callback)
+pyconfig.load("pymediacenter", proc_name="pymediacenter-gui", callback=configure_callback)
 
 
 class MainWindow(QMainWindow):

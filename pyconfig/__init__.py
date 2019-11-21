@@ -8,7 +8,7 @@ from pyconfig.exception import ConfigLoadError
 _root = {}
 
 
-def load(name, callback):
+def load(name, callback, proc_name=None):
     _root["name"] = name
     _root["config"] = {}
 
@@ -31,6 +31,9 @@ def load(name, callback):
 
     except FileNotFoundError:
         pass
+
+    if proc_name:
+        set_proc_name(proc_name)
 
     callback()
 
@@ -75,3 +78,11 @@ def edit(key_path, value):
 
 def appData_path():
     return _root["appData"]
+
+
+def set_proc_name(newname):
+    from ctypes import cdll, byref, create_string_buffer
+    libc = cdll.LoadLibrary('libc.so.6')
+    buff = create_string_buffer(len(newname)+1)
+    buff.value = newname.encode()
+    libc.prctl(15, byref(buff), 0, 0, 0)
