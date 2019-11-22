@@ -21,6 +21,7 @@ def movie_after_db(row):
     row["genre_ids"] = ret
     return row
 
+
 video_table = {
     "name": "videos",
     "attrs": {"video_id":       "INTEGER PRIMARY KEY AUTOINCREMENT",

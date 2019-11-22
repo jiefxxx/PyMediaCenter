@@ -13,35 +13,50 @@ CHUNK_SIZE = 1024*5
 
 
 async def feed_stream_reader(reader, stream_reader):
-    prev_data = b''
-    while True:
-        data = await reader.read(CHUNK_SIZE)
-        prev_data = stream_reader.feed(prev_data + data)
+    try:
+        prev_data = b''
+        while True:
+            data = await reader.read(CHUNK_SIZE)
+            if len(data) == 0:
+                break
+            prev_data = stream_reader.feed(prev_data + data)
+        return True
+    except (ConnectionResetError, BrokenPipeError):
+        return False
 
 
 async def get_header(reader):
-    header = HTTPHeader()
-    while True:
-        data = await reader.readline()
-        data = data[:-2]
-        if len(data) > 0:
-            header.parse_line(data)
-        else:
-            break
-    return header
+    try:
+        header = HTTPHeader()
+        while True:
+            data = await reader.readline()
+            data = data[:-2]
+            if len(data) > 0:
+                header.parse_line(data)
+            else:
+                break
+        return header
+    except (ConnectionResetError, BrokenPipeError):
+        return None
 
 
 async def feed_data(reader, size, handler):
-    while size > 0:
-        if CHUNK_SIZE > size:
-            data = await reader.read(size)
-        else:
-            data = await reader.read(CHUNK_SIZE)
-        size -= len(data)
-        if asyncio.iscoroutinefunction(handler.feed):
-            await handler.feed(data)
-        else:
-            handler.feed(data)
+    try:
+
+        while size > 0:
+            if CHUNK_SIZE > size:
+                data = await reader.read(size)
+            else:
+                data = await reader.read(CHUNK_SIZE)
+            size -= len(data)
+            if asyncio.iscoroutinefunction(handler.feed):
+                await handler.feed(data)
+            else:
+                handler.feed(data)
+        return True
+
+    except (ConnectionResetError, BrokenPipeError):
+        return False
 
 
 class HTTPConnection:
@@ -100,11 +115,12 @@ class HTTPConnection:
 
     async def receiver(self):
         header = await get_header(self.reader)
-        if not header.is_valid():
-            self.close()
+        if header is None or not header.is_valid():
+            self.kill()
             return
 
         handler = self.get_handler(header)
+
         if asyncio.iscoroutinefunction(handler.prepare):
             prepare_return = await handler.prepare()
         else:
@@ -115,7 +131,8 @@ class HTTPConnection:
 
         elif prepare_return == HTTP_CONNECTION_CONTINUE:
             data_count = int(header.fields.get("Content-Length", default='0'))
-            await feed_data(self.reader, data_count, handler)
+            if not await feed_data(self.reader, data_count, handler):
+                return self.kill()
 
             await self.execute(handler).async_wait()
 
@@ -123,7 +140,8 @@ class HTTPConnection:
 
         elif prepare_return == HTTP_CONNECTION_UPGRADE:
             stream_reader = handler.upgraded_streamReader
-            await feed_stream_reader(self.reader, stream_reader)
+            if not await feed_stream_reader(self.reader, stream_reader):
+                self.kill()
 
             return self.close()
 

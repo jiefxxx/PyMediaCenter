@@ -11,8 +11,7 @@
         },
         "movies": {
             "path": [
-                "/media/film_1",
-                "/media/div/movies/2"
+                "/media/film_1", "/media/div/movies/2"
             ]
         },
         "tvs": {

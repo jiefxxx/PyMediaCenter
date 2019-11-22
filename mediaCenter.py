@@ -8,7 +8,8 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QStackedWidget, QTabWidge
 from mediaCenter_lib.gui.mediaplayer import MediaPlayer
 from mediaCenter_lib.gui.movies import Movies
 from mediaCenter_lib.gui.upload_box import UploadBox
-from mediaCenter_lib.model import GenreModel, MovieModel, UploadVideoModel
+from mediaCenter_lib.gui.server_manager import ServerManager
+from mediaCenter_lib.model import GenreModel, MovieModel, UploadVideoModel, ServerActionModel
 from pythread import create_new_mode, close_all_mode
 from pythread.modes import ProcessMode
 
@@ -23,9 +24,10 @@ class MainWindow(QMainWindow):
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
         self.models = []
-        self.add_model("genre", GenreModel(None))
-        self.add_model("movie", MovieModel(None))
-        self.add_model("upload", UploadVideoModel(None))
+        self.add_model("genre", GenreModel())
+        self.add_model("movie", MovieModel())
+        self.add_model("upload", UploadVideoModel())
+        self.add_model("serveAction", ServerActionModel())
 
         self.setMouseTracking(True)
 
@@ -34,11 +36,13 @@ class MainWindow(QMainWindow):
         self.movies = Movies(self, callback=self.test)
         self.upload = UploadBox(self)
         self.media_player = MediaPlayer(self)
+        self.server_manager = ServerManager(self)
 
         self.tab = QTabWidget(self)
 
         self.tab.addTab(self.movies, "Films")
         self.tab.addTab(self.upload, "Uploads")
+        self.tab.addTab(self.server_manager, "config")
 
         self.stack = QStackedWidget(self)
 
@@ -85,9 +89,9 @@ class MainWindow(QMainWindow):
                 self.showFullScreen()
 
 
-create_new_mode(ProcessMode, "httpCom", size=4, debug=True)
-create_new_mode(ProcessMode, "poster", size=2, debug=True)
-create_new_mode(ProcessMode, "upload", size=1, debug=True)
+create_new_mode(ProcessMode, "httpCom", size=4)
+create_new_mode(ProcessMode, "poster", size=2)
+create_new_mode(ProcessMode, "upload", size=1)
 
 app = QApplication(sys.argv)
 window = MainWindow()

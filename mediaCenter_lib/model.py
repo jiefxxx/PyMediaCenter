@@ -1,30 +1,33 @@
 import json
 import os
-import sys
 import time
-from pathlib import Path
-
 import requests
-from PyQt5.QtCore import QVariant, QSize, Qt, pyqtSignal
-from PyQt5.QtGui import QIcon, QPixmap
 from requests_toolbelt.multipart.encoder import MultipartEncoderMonitor
+import websocket
+
+from PyQt5.QtCore import QVariant, QSize, Qt, pyqtSignal, QObject
+from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.QtWidgets import QFileDialog
 
 import pyconfig
+
 from common_lib.config import MEDIA_TYPE_MOVIE
 from common_lib.fct import convert_size
 from common_lib.videos_info import SearchMovie
+
 from mediaCenter_lib.base_model import ModelTableListDict
-from pythread import threaded
+
+from pythread import threaded, create_new_mode
+from pythread.modes import RunForeverMode
 
 
 class GenreModel(ModelTableListDict):
     refreshed = pyqtSignal()
 
-    def __init__(self, parent):
+    def __init__(self):
         ModelTableListDict.__init__(self, [("Name", "name", False),
                                            ("ID", "id", False)],
-                                    parent)
+                                    None)
         self.refresh()
 
     @threaded("httpCom")
@@ -40,7 +43,7 @@ class GenreModel(ModelTableListDict):
 class MovieModel(ModelTableListDict):
     refreshed = pyqtSignal()
 
-    def __init__(self, parent):
+    def __init__(self):
         ModelTableListDict.__init__(self, [("Title", "title", False),
                                            ("Original Title", "original_title", False),
                                            ("Video ID", "video_id", False),
@@ -48,32 +51,10 @@ class MovieModel(ModelTableListDict):
                                            ("Duration", "duration", False),
                                            ("Release date", "release_date", False),
                                            ("Vote", "vote_average", False),
-                                           ("Poster", "poster_path")], parent)
+                                           ("Poster", "poster_path")], None)
 
-        if sys.platform.startswith('linux'):
-            self.app_data_path = str(Path.home())+"/.pymediacenter"
-        elif sys.platform == "win32":
-            self.app_data_path = os.path.expandvars(r'%LOCALAPPDATA%')+"/pymediacenter"
-        else:
-            raise Exception("unknow système")
-
-        poster_path = self.app_data_path + "/poster"
-
-        self.poster_mini_path = poster_path + "/mini"
-        self.poster_original_path = poster_path + "/original"
-
-        if not os.path.exists(self.app_data_path):
-            print("Create ", self.app_data_path)
-            os.mkdir(self.app_data_path)
-        if not os.path.exists(poster_path):
-            print("Create ", poster_path)
-            os.mkdir(poster_path)
-        if not os.path.exists(self.poster_mini_path):
-            print("Create ", self.poster_mini_path)
-            os.mkdir(self.poster_mini_path)
-        if not os.path.exists(self.poster_original_path):
-            print("Create ", self.poster_original_path)
-            os.mkdir(self.poster_original_path)
+        self.poster_mini_path = pyconfig.get("rsc.poster_mini_path")
+        self.poster_original_path = pyconfig.get("rsc.poster_original_path")
 
         self.refresh()
 
@@ -149,15 +130,15 @@ class TmdbModel(ModelTableListDict):
 
 
 class UploadVideoModel(ModelTableListDict):
-    def __init__(self, parent):
+    def __init__(self):
         ModelTableListDict.__init__(self, [("Path", "path", False),
                                            ("Size", "size", False),
                                            ("Edited", "edited", False),
-                                           ("Status", "status", False)], parent)
+                                           ("Status", "status", False)], None)
 
     def add(self, files=None):
         if files is None:
-            files, _ = QFileDialog.getOpenFileNames(self.parent(), "get videos", "",
+            files, _ = QFileDialog.getOpenFileNames(None, "get videos", "",
                                                     "Video files (*.asf *.avi *.flv *.m4v *.mkv *.mov *.mp4 *.mpg "
                                                     "*.mpeg)")
         for file in files:
@@ -232,3 +213,33 @@ class UploadVideoModel(ModelTableListDict):
         else:
             self._status(path, "Invalid data")
         self.end_busy()
+
+
+class ServerActionModel(QObject):
+    progress = pyqtSignal('PyQt_PyObject')
+
+    def __init__(self):
+        QObject.__init__(self)
+        self.webSocket_conn = None
+        create_new_mode(RunForeverMode, "ws_script", self.run_webSocket)
+
+    @threaded("httpCom")
+    def start_script(self, name):
+
+        response = requests.get('http://192.168.1.55:4242/scripts/'+name)
+        if response.status_code == 200:
+            print(name, "ok")
+        else:
+            print(name, "pas ok")
+
+    def run_webSocket(self):
+        if self.webSocket_conn is None:
+            self.webSocket_conn = websocket.WebSocket()
+            self.webSocket_conn.connect('ws://192.168.1.55:4242/scripts')
+
+        self.progress.emit(json.loads(self.webSocket_conn.recv()))
+
+        return True
+
+    def refresh(self):
+        pass

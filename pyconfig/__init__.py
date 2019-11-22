@@ -13,9 +13,9 @@ def load(name, callback, proc_name=None):
     _root["config"] = {}
 
     if sys.platform.startswith('linux'):
-        _root["appData"] = str(Path.home()) + "/." + name
+        _root["appData"] = str(Path.home()) + "/." + name + "/"
     elif sys.platform == "win32":
-        _root["appData"] = os.path.expandvars(r'%LOCALAPPDATA%') + "/." + name
+        _root["appData"] = os.path.expandvars(r'%LOCALAPPDATA%') + "/" + name + "/"
     else:
         raise ConfigLoadError("Unknow Systeme")
 
@@ -74,6 +74,21 @@ def edit(key_path, value):
     for key in key_path[:-1]:
         current = current[key]
     current[key_path[-1]] = value
+
+
+def ensure_dir(path):
+    current_path = appData_path()
+    for path_frags in path.split("/"):
+        current_path += path_frags+"/"
+        if not os.path.exists(current_path):
+            print("Create ", current_path)
+            os.mkdir(current_path)
+
+
+def get_dir(path, ensure=True):
+    if ensure:
+        ensure_dir(path)
+    return appData_path()+path
 
 
 def appData_path():
