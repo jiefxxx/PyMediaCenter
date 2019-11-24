@@ -8,9 +8,8 @@ from mediaCenter_lib.model import TmdbModel
 
 class TmdbDialog(QDialog):
 
-    def __init__(self, video, *args, **kwargs):
+    def __init__(self, path, *args, **kwargs):
         super(TmdbDialog, self).__init__(*args, **kwargs)
-        self.video = video
         self.setWindowTitle("TMDBFinder")
         self.setMinimumSize(900, 400)
 
@@ -18,7 +17,7 @@ class TmdbDialog(QDialog):
 
         self.layout = QVBoxLayout()
 
-        self.label = QLabel(video["path"])
+        self.label = QLabel(path)
 
         self.hbox = QHBoxLayout()
         self.input = QLineEdit(self)
@@ -61,3 +60,25 @@ class TmdbDialog(QDialog):
             self.spinner.start()
         else:
             self.spinner.stop()
+
+
+class ConfirmationDialog(QDialog):
+
+    def __init__(self, string, *args, **kwargs):
+        QDialog.__init__(self, *args, **kwargs)
+        self.setWindowTitle("need confirmation")
+
+        end_button = QDialogButtonBox.Ok | QDialogButtonBox.Cancel
+
+        self.layout = QVBoxLayout()
+
+        self.label = QLabel(string)
+
+        self.buttonBox = QDialogButtonBox(end_button)
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
+
+        self.layout.addWidget(self.label)
+        self.layout.addWidget(self.buttonBox)
+        self.setLayout(self.layout)
+

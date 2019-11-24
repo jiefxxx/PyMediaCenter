@@ -1,10 +1,11 @@
 import unicodedata
 
-from PyQt5.QtCore import Qt, QSize, QSortFilterProxyModel
-from PyQt5.QtWidgets import QListView, QWidget, QHBoxLayout, QVBoxLayout, QLineEdit, QComboBox, QCheckBox
+from PyQt5.QtCore import Qt, QSize, QSortFilterProxyModel, QItemSelection, QItemSelectionModel
+from PyQt5.QtGui import QPixmap, QCursor
+from PyQt5.QtWidgets import QListView, QWidget, QHBoxLayout, QVBoxLayout, QLineEdit, QComboBox, QCheckBox, QLabel, QMenu
 
+from mediaCenter_lib.gui.menu import VideoMenu
 from mediaCenter_lib.gui.widget import QIconButton
-from mediaCenter_lib.model import MovieModel, GenreModel
 
 
 class Movies(QWidget):
@@ -14,6 +15,7 @@ class Movies(QWidget):
         self.callback = callback
 
         main_vbox = QVBoxLayout(self)
+        main_hbox = QHBoxLayout(self)
         self.top_hbox = QHBoxLayout(self)
 
         self.model = self.window().get_model("movie")
@@ -25,6 +27,10 @@ class Movies(QWidget):
 
         self.movie_list = MoviesList(self)
         self.movie_list.setModel(self.proxy)
+        self.selModel = self.movie_list.selectionModel()
+        self.selModel.selectionChanged.connect(self.on_select)
+
+        self.movie_info = MovieInfo(self)
 
         self.input = QLineEdit(self)
         self.input.textEdited.connect(self.on_input)
@@ -56,18 +62,39 @@ class Movies(QWidget):
         self.top_hbox.addWidget(self.refresh_button)
 
         main_vbox.addLayout(self.top_hbox)
-        main_vbox.addWidget(self.movie_list)
+
+        main_hbox.addWidget(self.movie_list, stretch=True)
+        main_hbox.addWidget(self.movie_info)
+
+        main_vbox.addLayout(main_hbox)
 
         self.setLayout(main_vbox)
+
+    def on_menu(self, event):
+        proxy_index = self.movie_list.indexAt(event.pos())
+        model_index = self.proxy.mapToSource(proxy_index)
+        data = self.model.data(model_index)
+
+        VideoMenu(self, data).popup(QCursor.pos())
+
+    def on_select(self, item_selection):
+        indexes = item_selection.indexes()
+        if len(indexes) == 0:
+            return
+        proxy_index = indexes[0]
+        model_index = self.proxy.mapToSource(proxy_index)
+        data = self.model.data(model_index)
+        self.model.get_info(data["video_id"])
 
     def on_genre_refreshed(self):
         self.combo_genre.setCurrentIndex(self.combo_genre.findText("Tous"))
 
     def on_movie_refreshed(self):
         self.refresh_button.setStyleSheet("")
+        self.movie_list.selectionModel().setCurrentIndex(self.proxy.index(0, 0), QItemSelectionModel.Select)
 
     def on_refresh(self):
-        self.refresh_button.setStyleSheet("QIconButton{background-color: rgba(255, 255, 255, 50);}")
+        self.refresh_button.setStyleSheet("QIconButton{background-color: red;}")
         self.model.refresh()
 
     def on_movie(self, proxy_index):
@@ -168,6 +195,35 @@ class SortProxy(QSortFilterProxyModel):
         return True
 
 
+MoviesListStylesheet = """
+
+QListView {
+    show-decoration-selected: 1; /* make the selection span the entire width of the view */
+}
+
+QListView::item:alternate {
+    background: #EEEEEE;
+}
+
+QListView::item:selected {
+    border: 2px solid red;
+}
+
+QListView::item:selected:!active {
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                stop: 0 #ABAFE5, stop: 1 #8588B2);
+}
+
+QListView::item:selected:active {
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                stop: 0 #6a6ea9, stop: 1 #888dd9);
+}
+
+QListView::item:hover {
+    
+}"""
+
+
 class MoviesList(QListView):
     def __init__(self, parent=None, callback=None):
         QListView.__init__(self, parent)
@@ -178,7 +234,78 @@ class MoviesList(QListView):
         self.setUniformItemSizes(True)
         self.setViewMode(QListView.IconMode)
         self.setLayoutMode(QListView.Batched)
-        self.setGridSize(QSize(154, 250))
+        self.setGridSize(QSize(156, 250))
         self.setIconSize(QSize(154, 231))
+        self.setStyleSheet(MoviesListStylesheet)
 
         self.doubleClicked.connect(self.parent().on_movie)
+
+    def contextMenuEvent(self, event):
+        self.parent().on_menu(event)
+
+
+class MovieInfo(QWidget):
+    def __init__(self, parent):
+        QWidget.__init__(self, parent)
+
+        self.setFixedWidth(370)
+
+        self.model = parent.model
+        self.model.info.connect(self.on_new_movie_info)
+
+        self.poster = QLabel(self)
+        pixmap = QPixmap("/home/jief/workspace/python-mediaMananger/rsc/404.jpg")
+        self.poster.setPixmap(pixmap)
+
+        self.title = QLabel()
+        self.title.setText("Title")
+        self.title.setWordWrap(True)
+
+        self.original_title = QLabel()
+        self.original_title.setText("Original Title")
+        self.original_title.setWordWrap(True)
+
+        self.release = QLabel()
+        self.release.setText("Release Date")
+
+        self.vote = QLabel()
+        self.vote.setText("0.0")
+
+        self.genres_label = QLabel()
+        self.genres_label.setText("No genres")
+        self.genres_label.setWordWrap(True)
+
+        self.overview = QLabel()
+        self.overview.setText("overview")
+        self.overview.setWordWrap(True)
+
+        self.movie_vbox = QVBoxLayout()
+        self.movie_vbox.addWidget(self.title)
+        self.movie_vbox.addWidget(self.original_title)
+        self.movie_vbox.addWidget(self.release)
+        self.movie_vbox.addWidget(self.vote)
+        self.movie_vbox.addWidget(self.genres_label)
+
+        self.movie_hbox = QHBoxLayout()
+        self.movie_hbox.addWidget(self.poster)
+        self.movie_hbox.addLayout(self.movie_vbox, stretch=True)
+
+        self.vbox = QVBoxLayout()
+        self.vbox.addLayout(self.movie_hbox)
+        self.vbox.addWidget(self.overview)
+        self.vbox.addStretch()
+
+        self.setLayout(self.vbox)
+
+    def on_new_movie_info(self, movie_info):
+        poster_path = self.model.get_poster_path(movie_info["poster_path"], mini=True)
+        pixmap = QPixmap(poster_path)
+        self.poster.setPixmap(pixmap)
+
+        self.title.setText(movie_info["title"])
+        self.original_title.setText(movie_info["original_title"])
+        self.release.setText(movie_info["release_date"])
+        self.genres_label.setText(str(movie_info["genres"]))
+        self.vote.setText(str(movie_info["vote_average"]))
+
+        self.overview.setText(movie_info["overview"])

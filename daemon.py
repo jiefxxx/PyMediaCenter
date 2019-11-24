@@ -4,7 +4,11 @@ import asyncio
 import tmdbsimple as tmdb
 
 from daemon_lib.db_scripts import DBUpdateScripts
-from daemon_lib.http_handlers import MovieHandler, GenreHandler, VideoHandler, UploadHandler, ScriptHandler
+from daemon_lib.handlers.videos import VideoHandler
+from daemon_lib.handlers.genres import GenreHandler
+from daemon_lib.handlers.movies import MovieHandler
+from daemon_lib.handlers.upload import UploadHandler
+from daemon_lib.handlers.scripts import ScriptHandler
 from daemon_lib.db_description import database_description
 from daemon_lib.ws_room import ScriptsRoom
 

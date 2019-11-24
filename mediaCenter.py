@@ -100,4 +100,3 @@ app.exec_()
 app.closingDown()
 
 close_all_mode()
-

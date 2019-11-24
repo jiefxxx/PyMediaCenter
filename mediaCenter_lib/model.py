@@ -42,6 +42,7 @@ class GenreModel(ModelTableListDict):
 
 class MovieModel(ModelTableListDict):
     refreshed = pyqtSignal()
+    info = pyqtSignal('PyQt_PyObject')
 
     def __init__(self):
         ModelTableListDict.__init__(self, [("Title", "title", False),
@@ -70,6 +71,13 @@ class MovieModel(ModelTableListDict):
             self.reset_data(data)
         self.refreshed.emit()
 
+    def get_info(self, video_id):
+        response = requests.get('http://192.168.1.55:4242/movie?video_id=' + str(video_id))
+        if response.status_code == 200:
+            data = response.json()
+            if len(data) > 0:
+                self.info.emit(data[0])
+
     def get_decoration_role(self, index):
         if index.column() == 0:
             if self.poster_exists(self.list[index.row()]["poster_path"]):
@@ -79,6 +87,8 @@ class MovieModel(ModelTableListDict):
         return QVariant()
 
     def get_poster_path(self, poster_path, mini=False):
+        if poster_path is None:
+            return "rsc/404.jpg"
         if mini:
             return self.poster_mini_path + poster_path
         else:

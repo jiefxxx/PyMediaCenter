@@ -70,7 +70,7 @@ class UploadBox(QWidget):
     def info(self):
         for index in self.table.selectionModel().selectedRows():
             video = self.model.data(index)
-            dlg = TmdbDialog(video, self)
+            dlg = TmdbDialog(video['path'], self)
             if dlg.exec_() and dlg.info is not None:
                 self.model.set_info(index, dlg.info)
 
