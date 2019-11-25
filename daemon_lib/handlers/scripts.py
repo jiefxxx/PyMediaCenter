@@ -23,6 +23,11 @@ class ScriptHandler(HTTPHandler):
         if script_name == "state":
             return self.response.send_json(200, scripts.get_state())
 
+        if script_name == "reset_database":
+            db.delete_all("videos")
+            db.delete_all("movies")
+            db.delete_all("genres")
+
         if scripts.start_script(script_name, db):
             return self.response.send_text(200, "ok")
 

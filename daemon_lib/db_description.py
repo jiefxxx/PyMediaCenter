@@ -35,7 +35,8 @@ video_table = {
             "height":           "INTEGER",
             "size":             "INTEGER",
             "m_time":           "TEXT",
-            "junk":             "INTEGER"}
+            "junk":             "INTEGER",
+            "last_time":        "INTEGER"}
 }
 
 movie_table = {

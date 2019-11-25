@@ -10,11 +10,17 @@ class ActionBar(QWidget):
         self.button_update_movies.clicked.connect(self.on_movies_update)
         self.button_update_genres = QPushButton("Mise à jour des genres", self)
         self.button_update_genres.clicked.connect(self.on_genres_update)
+        self.button_reset = QPushButton("Reset database", self)
+        self.button_reset.clicked.connect(self.on_reset)
         self.hbox.addWidget(self.button_update_files)
         self.hbox.addWidget(self.button_update_movies)
         self.hbox.addWidget(self.button_update_genres)
+        self.hbox.addWidget(self.button_reset)
         self.hbox.addStretch()
         self.setLayout(self.hbox)
+
+    def on_reset(self):
+        self.parent().model.start_script("reset_database")
 
     def on_genres_update(self):
         self.parent().model.start_script("update_genres")

@@ -35,6 +35,16 @@ class VideoHandler(HTTPHandler):
         if action == "delete":
             os.remove(video["path"])
             db.delete_row("videos", where={'video_id': int(video_id)})
+            return self.response.send_text(200, "ok ")
+
+        if action == "last_time":
+            last_time = int(self.header.url.get("media_type", default=None))
+            if last_time is None:
+                return self.response.send_error(400)
+
+            video["last_time"] = last_time
+            db.set("videos", video)
+            return self.response.send_text(200, "ok ")
 
         if action == "edit":
             media_type = int(self.header.url.get("media_type", default=None))
@@ -71,10 +81,5 @@ class VideoHandler(HTTPHandler):
 
             else:
                 return self.response.send_error(400)
-
-
-
-
-            pass
 
         return self.response.send_error(404)

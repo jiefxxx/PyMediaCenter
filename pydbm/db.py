@@ -116,6 +116,9 @@ class DataBase:
             c.execute(script, tuple(data))
         self.db.commit()
 
+    def delete_all(self, table):
+        self.delete_row(table, {})
+
     def create_table(self, table, constructor):
         script = "create table if not exists "
         script += table + " ("
