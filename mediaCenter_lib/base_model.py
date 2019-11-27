@@ -9,11 +9,16 @@ EDIT_KEY = 2
 class ModelTableListDict(QAbstractTableModel):
     busy = pyqtSignal('PyQt_PyObject')
 
-    def __init__(self, list_key, parent):
+    def __init__(self, list_key, connect=None):
+        if connect:
+            connect.refreshed.connect(self.refresh)
 
-        QAbstractTableModel.__init__(self, parent)
+        QAbstractTableModel.__init__(self, None)
         self.list = []
         self.list_key = list_key
+
+    def refresh(self):
+        pass
 
     def rowCount(self, parent=None, *args, **kwargs):
         return len(self.list)
@@ -37,7 +42,8 @@ class ModelTableListDict(QAbstractTableModel):
         try:
             if role == Qt.DisplayRole:
                 key = self.get_key(index.column())
-                return QVariant(str(self.list[index.row()][key]))
+                if key:
+                    return QVariant(str(self.list[index.row()][key]))
 
             elif role == Qt.DecorationRole:
                 return self.get_decoration_role(index)

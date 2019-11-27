@@ -16,7 +16,10 @@ class ThreadReturn:
         self.value = None
         self.error = None
         self.completeEvent = threading.Condition()
-        self.asyncEvent = Event()
+        try:
+            self.asyncEvent = Event()
+        except RuntimeError:
+            self.asyncEvent = None
         self.completed = False
         self.gen_queue = queue.Queue()
         self.gen = False
@@ -33,7 +36,8 @@ class ThreadReturn:
         with self.completeEvent:
             self.completed = True
             self.completeEvent.notify_all()
-            self.asyncEvent.set()
+            if self.asyncEvent:
+                self.asyncEvent.set()
             if isinstance(value, types.GeneratorType):
                 self.gen = True
                 for data in value:

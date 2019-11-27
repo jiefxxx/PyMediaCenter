@@ -4,6 +4,7 @@ from PyQt5.QtCore import Qt, QSize, QSortFilterProxyModel, QItemSelection, QItem
 from PyQt5.QtGui import QPixmap, QCursor
 from PyQt5.QtWidgets import QListView, QWidget, QHBoxLayout, QVBoxLayout, QLineEdit, QComboBox, QCheckBox, QLabel, QMenu
 
+from common_lib.fct import convert_duration, convert_size
 from mediaCenter_lib.gui.menu import VideoMenu
 from mediaCenter_lib.gui.widget import QIconButton
 
@@ -75,7 +76,7 @@ class Movies(QWidget):
         model_index = self.proxy.mapToSource(proxy_index)
         data = self.model.data(model_index)
 
-        VideoMenu(self, data).popup(QCursor.pos())
+        VideoMenu(self.window(), data).popup(QCursor.pos())
 
     def on_select(self, item_selection):
         indexes = item_selection.indexes()
@@ -234,8 +235,8 @@ class MoviesList(QListView):
         self.setUniformItemSizes(True)
         self.setViewMode(QListView.IconMode)
         self.setLayoutMode(QListView.Batched)
-        self.setGridSize(QSize(156, 250))
-        self.setIconSize(QSize(154, 231))
+        self.setGridSize(QSize(158, 234))
+        self.setIconSize(QSize(154, 230))
         self.setStyleSheet(MoviesListStylesheet)
 
         self.doubleClicked.connect(self.parent().on_movie)
@@ -248,7 +249,7 @@ class MovieInfo(QWidget):
     def __init__(self, parent):
         QWidget.__init__(self, parent)
 
-        self.setFixedWidth(370)
+        self.setFixedWidth(360)
 
         self.model = parent.model
         self.model.info.connect(self.on_new_movie_info)
@@ -279,6 +280,27 @@ class MovieInfo(QWidget):
         self.overview.setText("overview")
         self.overview.setWordWrap(True)
 
+        self.video_id = QLabel()
+        self.video_id.setText("video ID: None")
+
+        self.duration = QLabel()
+        self.duration.setText("Os")
+
+        self.size = QLabel()
+        self.size.setText("0 b")
+
+        self.video_codec = QLabel()
+        self.video_codec.setText("Codec: None")
+
+        self.bit_rate = QLabel()
+        self.bit_rate.setText(" 0 b/s")
+
+        self.definition = QLabel()
+        self.definition.setText("résolution 0px / 0px")
+
+        self.junk = QLabel()
+        self.junk.setText("Junk: None")
+
         self.movie_vbox = QVBoxLayout()
         self.movie_vbox.addWidget(self.title)
         self.movie_vbox.addWidget(self.original_title)
@@ -286,13 +308,26 @@ class MovieInfo(QWidget):
         self.movie_vbox.addWidget(self.vote)
         self.movie_vbox.addWidget(self.genres_label)
 
-        self.movie_hbox = QHBoxLayout()
-        self.movie_hbox.addWidget(self.poster)
-        self.movie_hbox.addLayout(self.movie_vbox, stretch=True)
+        movie_hbox = QHBoxLayout()
+        movie_hbox.addWidget(self.poster)
+        movie_hbox.addLayout(self.movie_vbox, stretch=True)
+
+        duration_hbox = QHBoxLayout()
+        duration_hbox.addWidget(self.duration)
+        duration_hbox.addWidget(self.size)
+
+        codec_hbox = QHBoxLayout()
+        codec_hbox.addWidget(self.video_codec)
+        codec_hbox.addWidget(self.bit_rate)
 
         self.vbox = QVBoxLayout()
-        self.vbox.addLayout(self.movie_hbox)
+        self.vbox.addLayout(movie_hbox)
         self.vbox.addWidget(self.overview)
+        self.vbox.addWidget(self.video_id)
+        self.vbox.addLayout(duration_hbox)
+        self.vbox.addLayout(codec_hbox)
+        self.vbox.addWidget(self.definition)
+        self.vbox.addWidget(self.junk)
         self.vbox.addStretch()
 
         self.setLayout(self.vbox)
@@ -309,3 +344,13 @@ class MovieInfo(QWidget):
         self.vote.setText(str(movie_info["vote_average"]))
 
         self.overview.setText(movie_info["overview"])
+
+        self.video_id.setText("video ID: "+str(movie_info["video_id"]))
+        self.duration.setText(convert_duration(movie_info["duration"]))
+        self.size.setText(convert_size(movie_info["size"]))
+        self.video_codec.setText("Codec: "+str(movie_info["codecs_video"]))
+        self.bit_rate.setText(convert_size(movie_info["bit_rate"])+"/s")
+
+        self.definition.setText("résolution: "+str(movie_info["width"])+"px / "+str(movie_info["height"])+"px")
+
+        self.junk.setText("Junk : "+str(movie_info["junk"]))

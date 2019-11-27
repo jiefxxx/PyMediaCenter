@@ -1,4 +1,5 @@
 import math
+import time
 
 
 def convert_size(size_bytes):
@@ -9,3 +10,8 @@ def convert_size(size_bytes):
     p = math.pow(1024, i)
     s = round(size_bytes / p, 2)
     return "%s %s" % (s, size_name[i])
+
+
+def convert_duration(millis):
+    seconds = int(millis/1000)
+    return time.strftime('%H:%M:%S', time.gmtime(seconds))

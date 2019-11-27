@@ -1,5 +1,5 @@
 def movie_before_db(row):
-    if "genre_ids" not in row:
+    if "genre_ids" not in row or not row["genre_ids"]:
         return row
     ret = ""
     for i in row["genre_ids"]:
@@ -12,7 +12,8 @@ def movie_before_db(row):
 
 
 def movie_after_db(row):
-    if "genre_ids" not in row:
+    if "genre_ids" not in row or not row["genre_ids"]:
+        row["genre_ids"] = []
         return row
     ret = []
     for i in row["genre_ids"].split(","):

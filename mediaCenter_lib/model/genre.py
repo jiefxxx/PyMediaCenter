@@ -8,10 +8,10 @@ from pythread import threaded
 class GenreModel(ModelTableListDict):
     refreshed = pyqtSignal()
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         ModelTableListDict.__init__(self, [("Name", "name", False),
                                            ("ID", "id", False)],
-                                    None)
+                                    **kwargs)
         self.refresh()
 
     @threaded("httpCom")

@@ -28,9 +28,11 @@ class ServerActionModel(QObject):
     def run_webSocket(self):
         if self.webSocket_conn is None:
             self.webSocket_conn = websocket.WebSocket()
-            self.webSocket_conn.connect('ws://192.168.1.55:4242/scripts')
-
-        self.progress.emit(json.loads(self.webSocket_conn.recv()))
+            self.webSocket_conn.connect('ws://192.168.1.55:4242/scripts', timeout=1)
+        try:
+            self.progress.emit(json.loads(self.webSocket_conn.recv()))
+        except websocket._exceptions.WebSocketTimeoutException:
+            pass
 
         return True
 

@@ -51,11 +51,13 @@ class VideoHandler(HTTPHandler):
             media_id = int(self.header.url.get("media_id", default=None))
             if media_type is None or media_id is None:
                 return self.response.send_error(400)
-            if video['media_id'] == media_id and video['media_type'] == media_type:
-                return self.response.send_text(200, "ok")
 
             if media_type == MEDIA_TYPE_MOVIE:
                 movie_info = get_movie_info(media_id, language=pyconfig.get("language"))
+                movie_info["genre_ids"] = []
+                for genre in movie_info["genres"]:
+                    movie_info["genre_ids"].append(genre["id"])
+
                 directory = os.path.dirname(video["path"])
                 ext = video["path"].split(".")[-1]
 

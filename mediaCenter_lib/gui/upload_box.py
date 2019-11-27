@@ -4,7 +4,6 @@ from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QTableView, QHead
 
 from mediaCenter_lib.gui.dialogs import TmdbDialog
 from mediaCenter_lib.gui.widget import QIconButton
-from mediaCenter_lib.model import UploadVideoModel
 
 
 class UploadBox(QWidget):
@@ -65,7 +64,7 @@ class UploadBox(QWidget):
             self.model.removeRow(indexes[0].row())
 
     def add(self):
-        self.model.add()
+        self.model.add_upload()
 
     def info(self):
         for index in self.table.selectionModel().selectedRows():

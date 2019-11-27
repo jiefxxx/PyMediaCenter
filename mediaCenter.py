@@ -9,7 +9,14 @@ from mediaCenter_lib.gui.mediaplayer import MediaPlayer
 from mediaCenter_lib.gui.movies import Movies
 from mediaCenter_lib.gui.upload_box import UploadBox
 from mediaCenter_lib.gui.server_manager import ServerManager
-from mediaCenter_lib.model import GenreModel, MovieModel, UploadVideoModel, ServerActionModel
+from mediaCenter_lib.gui.videos import Videos
+
+from mediaCenter_lib.model.genre import GenreModel
+from mediaCenter_lib.model.movie import MovieModel
+from mediaCenter_lib.model.upload import UploadVideoModel
+from mediaCenter_lib.model.server import ServerActionModel
+from mediaCenter_lib.model.video import VideoModel
+
 from pythread import create_new_mode, close_all_mode
 from pythread.modes import ProcessMode
 
@@ -24,8 +31,9 @@ class MainWindow(QMainWindow):
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
         self.models = []
+        self.add_model("video", VideoModel())
         self.add_model("genre", GenreModel())
-        self.add_model("movie", MovieModel())
+        self.add_model("movie", MovieModel(connect=self.get_model("video")))
         self.add_model("upload", UploadVideoModel())
         self.add_model("serveAction", ServerActionModel())
 
@@ -37,11 +45,13 @@ class MainWindow(QMainWindow):
         self.upload = UploadBox(self)
         self.media_player = MediaPlayer(self)
         self.server_manager = ServerManager(self)
+        self.videos = Videos(self)
 
         self.tab = QTabWidget(self)
 
         self.tab.addTab(self.movies, "Films")
-        self.tab.addTab(self.upload, "Uploads")
+        self.tab.addTab(self.videos, "Videos")
+        self.tab.addTab(self.upload, "Videos transfer")
         self.tab.addTab(self.server_manager, "config")
 
         self.stack = QStackedWidget(self)
@@ -91,11 +101,11 @@ class MainWindow(QMainWindow):
 
 create_new_mode(ProcessMode, "httpCom", size=4)
 create_new_mode(ProcessMode, "poster", size=2)
-create_new_mode(ProcessMode, "upload", size=1)
 
 app = QApplication(sys.argv)
 window = MainWindow()
 window.showMaximized()
+
 app.exec_()
 app.closingDown()
 

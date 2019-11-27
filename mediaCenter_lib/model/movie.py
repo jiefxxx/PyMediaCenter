@@ -13,26 +13,26 @@ class MovieModel(ModelTableListDict):
     refreshed = pyqtSignal()
     info = pyqtSignal('PyQt_PyObject')
 
-    def __init__(self):
-        ModelTableListDict.__init__(self, [("Title", "title", False),
+    def __init__(self, **kwargs):
+        ModelTableListDict.__init__(self, [("#", None, False),
+                                           ("Title", "title", False),
                                            ("Original Title", "original_title", False),
                                            ("Video ID", "video_id", False),
                                            ("Genre ID", "genre_ids", False),
                                            ("Duration", "duration", False),
                                            ("Release date", "release_date", False),
                                            ("Vote", "vote_average", False),
-                                           ("Poster", "poster_path")], None)
+                                           ("Poster", "poster_path")], **kwargs)
 
         self.poster_mini_path = pyconfig.get("rsc.poster_mini_path")
         self.poster_original_path = pyconfig.get("rsc.poster_original_path")
-
-        self.refresh()
 
     @threaded("httpCom")
     def refresh(self):
         requested_key = ""
         for key in self.get_keys():
-            requested_key += key+","
+            if key:
+                requested_key += key+","
         requested_key = requested_key[:-1]
         response = requests.get('http://192.168.1.55:4242/movie?columns='+requested_key)
         if response.status_code == 200:
