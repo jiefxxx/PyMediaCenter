@@ -28,8 +28,8 @@ import pyconfig
 pyconfig.load("pymediacenter", proc_name="pymediacenter-gui", callback=configure_callback)
 
 list_servers = ServersManager()
-list_servers.new("local", "127.0.0.1")
-list_servers.new("server", "192.168.1.55")
+# list_servers.new("local", "127.0.0.1")
+list_servers.new("server", "192.168.1.55", ethernet="6c:f0:49:56:03:c8")
 
 
 class MainWindow(QMainWindow):
@@ -90,6 +90,10 @@ class MainWindow(QMainWindow):
     def add_model(self, name, model):
         self.models.append((name, model))
 
+    def close_all_model(self):
+        for model_name, model in self.models:
+            model.close()
+
     def get_model(self, name):
         for model_name, model in self.models:
             if model_name == name:
@@ -135,3 +139,4 @@ app.exec_()
 app.closingDown()
 
 close_all_mode()
+window.close_all_model()

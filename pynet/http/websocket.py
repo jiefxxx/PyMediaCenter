@@ -78,6 +78,9 @@ class WebSocketClient:
         self.room = room
         self.room.new_client(self)
 
+    def error(self):
+        self.room.on_error(self)
+
     def feed(self, data):
         message, data = webSocket_parse(data)
         self.room.exec_message(self, message)
@@ -92,6 +95,9 @@ class WebSocketClient:
 
     def send_binary(self, binary):
         self.send(1, 2, binary)
+
+    def ping(self):
+        self.send(1, 0x09, b"42")
 
 
 class WebSocketRoom:
@@ -110,7 +116,10 @@ class WebSocketRoom:
             raise Exception("client unknown")
         if message[1] == 9:
             client.send((1, 10, message[2]))
+        elif message[1] == 0x0A:
+            pass
         elif message[1] == 8:
+            self.on_close(client)
             self.clients.remove(client)
         elif message[1] == 1:
             self.on_message(client, message[2].decode())
@@ -119,10 +128,18 @@ class WebSocketRoom:
         else:
             raise Exception("Opcode not implemented", message[1])
 
+    @threaded("httpServer")
+    def on_error(self, client):
+        self.on_close(client)
+        self.clients.remove(client)
+
     def on_message(self, client, message):
         pass
 
     def on_new(self, client):
+        pass
+
+    def on_close(self, client):
         pass
 
     def send(self, data, client=None):
@@ -137,6 +154,10 @@ class WebSocketRoom:
             client.send_binary(data)
         else:
             raise Exception("Unknown type", type(data), data)
+
+    def ping_all(self):
+        for client in self.clients:
+            client.ping()
 
     def send_json(self, data, client=None):
         data = json.dumps(data, sort_keys=True, indent=4)

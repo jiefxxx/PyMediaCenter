@@ -162,3 +162,6 @@ class ModelTableListDict(QAbstractTableModel):
 
     def refresh(self):
         pass
+
+    def close(self):
+        pass

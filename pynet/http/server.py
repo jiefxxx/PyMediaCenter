@@ -22,6 +22,7 @@ async def feed_stream_reader(reader, stream_reader):
             prev_data = stream_reader.feed(prev_data + data)
         return True
     except (ConnectionResetError, BrokenPipeError):
+        stream_reader.error()
         return False
 
 

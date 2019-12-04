@@ -1,5 +1,7 @@
 #! python3
 import asyncio
+import os
+import time
 
 import tmdbsimple as tmdb
 
@@ -22,6 +24,15 @@ from common_lib.config import configure_callback
 import pyconfig
 
 pyconfig.load("pymediacenter", proc_name="pymediacenter-daemon", callback=configure_callback)
+
+
+async def power_management(sys_com):
+    while True:
+        sys_com.ping_all()
+        await asyncio.sleep(60)
+        if sys_com.get_last_time()+20*60 < time.time():
+            print("entering power saving mode")
+            os.system("sudo pm-suspend")
 
 
 database = DataBase(pyconfig.get("database.path"))
@@ -47,6 +58,7 @@ http_server.add_route("/upload", UploadHandler)
 
 http_server.initialize()
 _loop.set_debug(False)
+_loop.create_task(power_management(scripts_room))
 try:
     _loop.run_forever()
 except KeyboardInterrupt:

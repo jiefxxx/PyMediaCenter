@@ -22,3 +22,5 @@ class ServerActionModel(QObject):
     def get_progress_action(self, server_name):
         return self.servers.server(server_name).progress
 
+    def close(self):
+        self.servers.close()

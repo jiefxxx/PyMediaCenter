@@ -186,7 +186,11 @@ class Server(QObject):
                 self.webSocket_conn = websocket.WebSocket()
                 self.webSocket_conn.connect('ws://' + self.address + ":" + str(self.port) + '/scripts', timeout=1)
                 self.manager.connected.emit(self.name)
-            except (ConnectionRefusedError, websocket._exceptions.WebSocketAddressException, socket.timeout):
+            except (ConnectionRefusedError,
+                    websocket._exceptions.WebSocketAddressException,
+                    socket.timeout,
+                    OSError,
+                    websocket._exceptions.WebSocketTimeoutException):
                 self.webSocket_conn = None
                 self.manager.connection_error.emit(self.name)
                 time.sleep(5)
@@ -205,6 +209,10 @@ class Server(QObject):
             self.manager.disconnected.emit(self.name)
 
         return True
+
+    def close(self):
+        print("close")
+        self.webSocket_conn.close()
 
 
 class ServersManager(QObject):
@@ -228,6 +236,10 @@ class ServersManager(QObject):
 
     def all(self):
         return self.servers_list
+
+    def close(self):
+        for server in self.servers_list:
+            server.close()
 
 
 
