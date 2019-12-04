@@ -1,6 +1,12 @@
 import os
+import sys
 import tmdbsimple as tmdb
-import magic
+
+if sys.platform == "win32":
+    from winmagic import magic
+else:
+    import magic
+
 from alphabet_detector import AlphabetDetector
 from pymediainfo import MediaInfo
 

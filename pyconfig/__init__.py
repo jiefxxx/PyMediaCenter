@@ -14,6 +14,8 @@ def load(name, callback, proc_name=None):
 
     if sys.platform.startswith('linux'):
         _root["appData"] = str(Path.home()) + "/." + name + "/"
+        if proc_name:
+            set_proc_name(proc_name)
     elif sys.platform == "win32":
         _root["appData"] = os.path.expandvars(r'%LOCALAPPDATA%') + "/" + name + "/"
     else:
@@ -31,9 +33,6 @@ def load(name, callback, proc_name=None):
 
     except FileNotFoundError:
         pass
-
-    if proc_name:
-        set_proc_name(proc_name)
 
     callback()
 
