@@ -5,15 +5,15 @@ from PyQt5.QtCore import pyqtSignal, QVariant, QSize, Qt
 from PyQt5.QtGui import QIcon, QPixmap
 
 import pyconfig
-from mediaCenter_lib.base_model import ModelTableListDict
+from mediaCenter_lib.base_model import ModelTableListDict, ServerStateHandler
 from pythread import threaded
 
 
-class MovieModel(ModelTableListDict):
+class MovieModel(ServerStateHandler, ModelTableListDict):
     refreshed = pyqtSignal()
     info = pyqtSignal('PyQt_PyObject')
 
-    def __init__(self, **kwargs):
+    def __init__(self, servers,  **kwargs):
         ModelTableListDict.__init__(self, [("#", None, False),
                                            ("Title", "title", False),
                                            ("Original Title", "original_title", False),
@@ -27,25 +27,30 @@ class MovieModel(ModelTableListDict):
         self.poster_mini_path = pyconfig.get("rsc.poster_mini_path")
         self.poster_original_path = pyconfig.get("rsc.poster_original_path")
 
+        ServerStateHandler.__init__(self, servers)
+        self.refresh()
+
+    def on_connection(self, server_name):
+        self.refresh()
+
+    def on_disconnection(self, server_name):
+        self.refresh()
+
+    def on_refresh(self, server_name, section):
+        if section == "video" or section == "movie":
+            self.refresh()
+
     @threaded("httpCom")
     def refresh(self):
-        requested_key = ""
-        for key in self.get_keys():
-            if key:
-                requested_key += key+","
-        requested_key = requested_key[:-1]
-        response = requests.get('http://192.168.1.55:4242/movie?columns='+requested_key)
-        if response.status_code == 200:
-            data = response.json()
-            self.reset_data(data)
+        data = []
+        for server in self.servers.all():
+            data += list(server.get_movies(columns=list(self.get_keys())))
+        self.reset_data(data)
         self.refreshed.emit()
 
-    def get_info(self, video_id):
-        response = requests.get('http://192.168.1.55:4242/movie?video_id=' + str(video_id))
-        if response.status_code == 200:
-            data = response.json()
-            if len(data) > 0:
-                self.info.emit(data[0])
+    @threaded("httpCom")
+    def get_info(self, video):
+        self.info.emit(list(self.servers.server(video["server"]).get_movies(video_id=video["video_id"]))[0])
 
     def get_decoration_role(self, index):
         if index.column() == 0:

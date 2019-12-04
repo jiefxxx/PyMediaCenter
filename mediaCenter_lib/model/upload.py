@@ -14,12 +14,14 @@ from pythread.modes import RunForeverMode
 
 
 class UploadVideoModel(ModelTableListDict):
-    def __init__(self, **kwargs):
+    def __init__(self, servers, **kwargs):
         ModelTableListDict.__init__(self, [("Type", "type", False),
                                            ("Path", "path", False),
                                            ("Size", "size", False),
                                            ("Edited", "edited", False),
+                                           ("Server", "server", False),
                                            ("Status", "status", False)], **kwargs)
+        self.servers = servers
         create_new_mode(RunForeverMode, "up.down", self.run_video_transfer)
 
     def add_upload(self, files=None):
@@ -35,21 +37,16 @@ class UploadVideoModel(ModelTableListDict):
                                "size": convert_size(os.path.getsize(file)),
                                "status": "pending"})
 
-    def add_download(self, video_id, location):
-        response = requests.get('http://192.168.1.55:4242/video/' + str(video_id))
-        data = None
-        if response.status_code == 200:
-            data = response.json()
-
-        if not data:
-            raise Exception("video data not found (" + str(video_id) + ")")
+    def add_download(self, video, location):
+        data = list(self.servers.server(video["server"]).get_videos(video_id=video["video_id"]))[0]
 
         filename = os.path.basename(data["path"])
 
         filename = location + "/" + filename
 
         self.add_data({"type": "download",
-                       "video_id": video_id,
+                       "server": data["server"],
+                       "video_id": data["video_id"],
                        "path": filename,
                        "size": convert_size(data["size"]),
                        "status": "queued"})
@@ -68,87 +65,38 @@ class UploadVideoModel(ModelTableListDict):
             video["edited"] = "find movie : " + info["title"] + " " + info["release_date"][:4]
             self.setData(index, video)
 
-    def _status(self, path, status):
+    def _status(self, path, status, progress):
         video, index = self.get_by_path(path)
         if video is None:
             return
         video["status"] = status
         self.setData(index, video)
 
-    def send(self, index):
+    def send(self, index, server_name):
         video = self.data(index)
         video["status"] = "queued"
+        video["server"] = server_name
         self.setData(index, video)
 
     def run_video_transfer(self):
         for video in self.list:
             if video["status"] == "queued":
                 if video["type"] == "download":
-                    self.download_video(video)
+                    self.begin_busy()
+                    self.servers.server(video["server"]).download_video(video.get("video_id"),
+                                                                        video.get("path"), callback=self._status)
+                    self.end_busy()
                 elif video["type"] == "upload":
-                    self.upload_video(video)
+                    self.begin_busy()
+                    self.servers.server(video["server"]).upload_video(video.get("path"),
+                                                                      video.get("media_type"),
+                                                                      video.get("id"), callback=self._status)
+                    self.end_busy()
         time.sleep(1)
         return True
 
-    def download_video(self, video):
-        video_id = video["video_id"]
-        filename = video["path"]
-        first_time = time.time()
-        with requests.get('http://192.168.1.55:4242/video/' + str(video_id) + "/stream", stream=True) as r:
-            if r.status_code == 200:
-                size = int(r.headers['Content-length'])
-                cur_size = 0
-                with open(filename, 'wb') as f:
-                    for chunk in r.iter_content(chunk_size=8192):
-                        if chunk:  # filter out keep-alive new chunks
-                            cur_size += len(chunk)
-                            f.write(chunk)
-                            # f.flush()
-                            brandwith = cur_size/(time.time() - first_time)
-                            self._status(filename, "download " + str(int((cur_size/size)*100)) + "% " +
-                                         convert_size(brandwith) + "/s")
-                self._status(filename, "ended")
-            else:
-                self._status(filename, "error downloading")
-
-    def upload_video(self, video):
-        self.begin_busy()
-        path = video.get("path")
-        media_type = video.get("media_type")
-        media_id = video.get("id")
-        if path and media_type and media_id:
-
-            def callback(monitor):
-                try:
-                    elapsed = time.time()-callback.first_time
-                    bandwidth = round((monitor.bytes_read / elapsed)/(1024*1024), 2)
-                except AttributeError:
-                    callback.first_time = time.time()
-                    bandwidth = 0
-
-                progress = round(monitor.bytes_read/monitor.len*100.0, 2)
-                if monitor.bytes_read == monitor.len:
-                    self._status(path, "writing file to disk...")
-                else:
-                    self._status(path, "Sending... ("+str(progress)+"): "+str(bandwidth)+"MB/S")
-
-            m = MultipartEncoderMonitor.from_fields(
-                fields={"json": json.dumps({"media_id": media_id,
-                                            "ext": path.split(".")[-1]}),
-                        'video': open(path, 'rb')},
-                callback=callback
-            )
-
-            self._status(path, "Sending...")
-            try:
-                r = requests.post("http://192.168.1.55:4242/upload?media_type="+str(media_type), data=m,
-                                  headers={'Content-Type': m.content_type})
-                if r.status_code == 200:
-                    self._status(path, "Send completed")
-                else:
-                    self._status(path, "Send error")
-            except requests.exceptions.ConnectionError:
-                self._status(path, "Send connection error")
-        else:
-            self._status(path, "Invalid data")
-        self.end_busy()
+    def get_servers(self):
+        ret = []
+        for server in self.servers.all():
+            ret.append(server.name)
+        return ret

@@ -35,6 +35,7 @@ class VideoHandler(HTTPHandler):
         if action == "delete":
             os.remove(video["path"])
             db.delete_row("videos", where={'video_id': int(video_id)})
+            self.user_data["notify"].notify_refresh("video")
             return self.response.send_text(200, "ok ")
 
         if action == "last_time":
@@ -79,6 +80,7 @@ class VideoHandler(HTTPHandler):
 
                 db.set("videos", video)
                 db.set("movies", movie_info)
+                self.user_data["notify"].notify_refresh("video")
                 self.response.send_text(200, "ok " + video["path"])
 
             else:

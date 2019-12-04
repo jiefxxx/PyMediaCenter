@@ -58,6 +58,7 @@ class UploadHandler(HTTPHandler):
             db.set("videos", video_info)
             db.set("movies", movie_info)
             self.response.send_text(200, "ok " + video_info["path"])
+            self.user_data["notify"].notify_refresh("video")
             return
 
         print("media_type "+str(media_type))

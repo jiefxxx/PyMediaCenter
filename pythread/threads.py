@@ -19,14 +19,15 @@ class Thread(threading.Thread):
     def _exec_fct(self, fct, ret, args, kwargs):
         try:
             value = fct(*args, **kwargs)
-            if ret is not None:
+            if ret:
                 ret.set_value(value)
             return value
         except Exception as e:
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback, file=sys.stdout)
             print("exception in thread" + self.getName() + " :")
-            ret.set_error(e)
+            if ret:
+                ret.set_error(e)
 
     def _run(self):
         pass

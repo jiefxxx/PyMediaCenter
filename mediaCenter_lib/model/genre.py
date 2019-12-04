@@ -1,24 +1,30 @@
 import requests
 from PyQt5.QtCore import pyqtSignal
 
-from mediaCenter_lib.base_model import ModelTableListDict
+from mediaCenter_lib.base_model import ModelTableListDict, ServerStateHandler
 from pythread import threaded
 
 
-class GenreModel(ModelTableListDict):
+class GenreModel(ServerStateHandler, ModelTableListDict):
     refreshed = pyqtSignal()
 
-    def __init__(self, **kwargs):
+    def __init__(self, servers, **kwargs):
         ModelTableListDict.__init__(self, [("Name", "name", False),
                                            ("ID", "id", False)],
                                     **kwargs)
+        ServerStateHandler.__init__(self, servers)
+        self.refresh()
+
+    def on_connection(self, server_name):
+        self.refresh()
+
+    def on_disconnection(self, server_name):
         self.refresh()
 
     @threaded("httpCom")
     def refresh(self):
-        response = requests.get('http://192.168.1.55:4242/genre')
-        if response.status_code == 200:
-            data = [{"name": "Tous", "id": 0}]
-            data += response.json()
-            self.reset_data(data)
-            self.refreshed.emit()
+        server = self.servers.all()[0]
+        data = server.get_genres()
+        data += [{"name": "Tous", "id": 0}]
+        self.reset_data(data)
+        self.refreshed.emit()

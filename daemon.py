@@ -37,6 +37,7 @@ _loop = asyncio.get_event_loop()
 http_server = HTTPServer(_loop)
 
 http_server.add_user_data("database", database)
+http_server.add_user_data("notify", scripts_room)
 
 http_server.add_route("/movie/?([^/]*)/?", MovieHandler)
 http_server.add_route("/genre", GenreHandler)

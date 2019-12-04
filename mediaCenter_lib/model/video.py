@@ -1,15 +1,15 @@
 import requests
 from PyQt5.QtCore import pyqtSignal
 
-from mediaCenter_lib.base_model import ModelTableListDict
+from mediaCenter_lib.base_model import ModelTableListDict, ServerStateHandler
 from pythread import threaded
 
 
-class VideoModel(ModelTableListDict):
+class VideoModel( ServerStateHandler, ModelTableListDict):
     refreshed = pyqtSignal()
     info = pyqtSignal('PyQt_PyObject')
 
-    def __init__(self, **kwargs):
+    def __init__(self, servers, **kwargs):
         ModelTableListDict.__init__(self, [("Video ID", "video_id", False),
                                            ("Path", "path", False),
                                            ("Media Type", "media_type", False),
@@ -23,35 +23,35 @@ class VideoModel(ModelTableListDict):
                                            ("Junk", "junk", False),
                                            ("Last", "last_time", False)], **kwargs)
 
+        ServerStateHandler.__init__(self, servers)
         self.refresh()
+
+    def on_connection(self, server_name):
+        self.refresh()
+
+    def on_disconnection(self, server_name):
+        self.refresh()
+
+    def on_refresh(self, server_name, section):
+        if section == "video":
+            self.refresh()
 
     @threaded("httpCom")
     def refresh(self):
-        requested_key = ""
-        for key in self.get_keys():
-            requested_key += key + ","
-        requested_key = requested_key[:-1]
-        response = requests.get('http://192.168.1.55:4242/video?columns=' + requested_key)
-        if response.status_code == 200:
-            data = response.json()
-            self.reset_data(data)
+        data = []
+        for server in self.servers.all():
+            data += list(server.get_videos(columns=list(self.get_keys())))
+
+        self.reset_data(data)
         self.refreshed.emit()
 
     @threaded("httpCom")
-    def delete(self, video_id):
-        response = requests.get("http://192.168.1.55:4242/video/"+str(video_id)+"/delete")
-        if response.status_code == 200:
-            self.refresh()
-        else:
-            print(response)
+    def delete(self, video):
+        self.servers.server(video["server"]).delete_video(video["video_id"])
+        self.refresh()
 
     @threaded("httpCom")
-    def edit(self, video_id, media_type, media_id):
-        response = requests.get("http://192.168.1.55:4242/video/" + str(video_id) +
-                                "/edit?media_type=" + str(media_type) +
-                                "&media_id=" + str(media_id))
-        if response.status_code == 200:
-            self.refresh()
-        else:
-            print(response)
+    def edit(self, video, media_type, media_id):
+        self.serves.server(video["server"]).edit_video(video["video_id"], media_type, media_id)
+        self.refresh()
 

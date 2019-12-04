@@ -15,9 +15,9 @@ class Movies(QWidget):
 
         self.callback = callback
 
-        main_vbox = QVBoxLayout(self)
-        main_hbox = QHBoxLayout(self)
-        self.top_hbox = QHBoxLayout(self)
+        self.top_hbox = QHBoxLayout()
+        main_vbox = QVBoxLayout()
+        main_hbox = QHBoxLayout()
 
         self.model = self.window().get_model("movie")
         self.model.refreshed.connect(self.on_movie_refreshed)
@@ -85,7 +85,7 @@ class Movies(QWidget):
         proxy_index = indexes[0]
         model_index = self.proxy.mapToSource(proxy_index)
         data = self.model.data(model_index)
-        self.model.get_info(data["video_id"])
+        self.model.get_info(data)
 
     def on_genre_refreshed(self):
         self.combo_genre.setCurrentIndex(self.combo_genre.findText("Tous"))
@@ -345,7 +345,7 @@ class MovieInfo(QWidget):
 
         self.overview.setText(movie_info["overview"])
 
-        self.video_id.setText("video ID: "+str(movie_info["video_id"]))
+        self.video_id.setText("video ID: "+str(movie_info["server"])+":"+str(movie_info["video_id"]))
         self.duration.setText(convert_duration(movie_info["duration"]))
         self.size.setText(convert_size(movie_info["size"]))
         self.video_codec.setText("Codec: "+str(movie_info["codecs_video"]))

@@ -22,7 +22,7 @@ class DBUpdateScripts(Scripts):
 
     def set_progress(self, progress, string):
         Scripts.set_progress(self, progress, string)
-        self.webSocket_send.send_json(self.get_state())
+        self.webSocket_send.notify_progress(self.get_state())
 
     def update_genres(self, db):
         self.set_progress(0, "started")
@@ -52,6 +52,7 @@ class DBUpdateScripts(Scripts):
         self.update_videos_worker("videos.movies.path", MEDIA_TYPE_MOVIE, db)
         self.update_videos_worker("videos.tvs.path", MEDIA_TYPE_TV, db)
         self.set_progress(1, "finish")
+        self.webSocket_send.notify_refresh("video")
 
     def update_movies(self, db):
         self.set_progress(0, "started")
@@ -76,6 +77,9 @@ class DBUpdateScripts(Scripts):
                     video["media_id"] = movie_info["id"]
                     db.set("movies", movie_info)
                     db.set("videos", video)
+
+        self.set_progress(1, "finish")
+        self.webSocket_send.notify_refresh("movie")
 
 
 

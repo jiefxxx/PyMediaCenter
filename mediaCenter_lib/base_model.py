@@ -1,17 +1,32 @@
 
-from PyQt5.QtCore import QAbstractTableModel, pyqtSignal, QVariant, QModelIndex, Qt
+from PyQt5.QtCore import QAbstractTableModel, pyqtSignal, QVariant, QModelIndex, Qt, QObject
 
 DISPLAY_KEY = 0
 DICT_KEY = 1
 EDIT_KEY = 2
 
 
+class ServerStateHandler:
+    def __init__(self, servers):
+        self.servers = servers
+        self.servers.connected.connect(self.on_connection)
+        self.servers.disconnected.connect(self.on_disconnection)
+        self.servers.refresh.connect(self.on_refresh)
+
+    def on_connection(self, server_name):
+        pass
+
+    def on_disconnection(self, server_name):
+        pass
+
+    def on_refresh(self, server_name, section):
+        pass
+
+
 class ModelTableListDict(QAbstractTableModel):
     busy = pyqtSignal('PyQt_PyObject')
 
     def __init__(self, list_key, connect=None):
-        if connect:
-            connect.refreshed.connect(self.refresh)
 
         QAbstractTableModel.__init__(self, None)
         self.list = []

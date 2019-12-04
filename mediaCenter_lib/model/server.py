@@ -9,32 +9,16 @@ from pythread.modes import RunForeverMode
 
 
 class ServerActionModel(QObject):
-    progress = pyqtSignal('PyQt_PyObject')
 
-    def __init__(self):
+    def __init__(self, servers):
         QObject.__init__(self)
         self.webSocket_conn = None
-        create_new_mode(RunForeverMode, "ws_script", self.run_webSocket)
+        self.servers = servers
 
     @threaded("httpCom")
-    def start_script(self, name):
+    def start_script(self, name, server_name):
+        self.servers.server(server_name).start_script(name)
 
-        response = requests.get('http://192.168.1.55:4242/scripts/'+name)
-        if response.status_code == 200:
-            print(name, "ok")
-        else:
-            print(name, "pas ok")
+    def get_progress_action(self, server_name):
+        return self.servers.server(server_name).progress
 
-    def run_webSocket(self):
-        if self.webSocket_conn is None:
-            self.webSocket_conn = websocket.WebSocket()
-            self.webSocket_conn.connect('ws://192.168.1.55:4242/scripts', timeout=1)
-        try:
-            self.progress.emit(json.loads(self.webSocket_conn.recv()))
-        except websocket._exceptions.WebSocketTimeoutException:
-            pass
-
-        return True
-
-    def refresh(self):
-        pass

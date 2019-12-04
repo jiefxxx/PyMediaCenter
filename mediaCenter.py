@@ -1,10 +1,11 @@
 #! python3
 
 import sys
-
+import time
 
 from PyQt5.QtWidgets import QApplication, QMainWindow, QStackedWidget, QTabWidget
 
+from mediaCenter_lib.gui.dialogs import ConfirmationDialog
 from mediaCenter_lib.gui.mediaplayer import MediaPlayer
 from mediaCenter_lib.gui.movies import Movies
 from mediaCenter_lib.gui.upload_box import UploadBox
@@ -16,6 +17,7 @@ from mediaCenter_lib.model.movie import MovieModel
 from mediaCenter_lib.model.upload import UploadVideoModel
 from mediaCenter_lib.model.server import ServerActionModel
 from mediaCenter_lib.model.video import VideoModel
+from mediaCenter_lib.server import ServersManager
 
 from pythread import create_new_mode, close_all_mode
 from pythread.modes import ProcessMode
@@ -25,17 +27,23 @@ import pyconfig
 
 pyconfig.load("pymediacenter", proc_name="pymediacenter-gui", callback=configure_callback)
 
+list_servers = ServersManager()
+list_servers.new("local", "127.0.0.1")
+list_servers.new("server", "192.168.1.55")
+
 
 class MainWindow(QMainWindow):
 
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
         self.models = []
-        self.add_model("video", VideoModel())
-        self.add_model("genre", GenreModel())
-        self.add_model("movie", MovieModel(connect=self.get_model("video")))
-        self.add_model("upload", UploadVideoModel())
-        self.add_model("serveAction", ServerActionModel())
+        self.add_model("video", VideoModel(list_servers))
+        self.add_model("genre", GenreModel(list_servers))
+        self.add_model("movie", MovieModel(list_servers, connect=self.get_model("video")))
+        self.add_model("upload", UploadVideoModel(list_servers))
+        self.add_model("server", ServerActionModel(list_servers))
+        list_servers.connection_error.connect(self.on_connection_error)
+        list_servers.connected.connect(self.on_connection)
 
         self.setMouseTracking(True)
 
@@ -63,21 +71,38 @@ class MainWindow(QMainWindow):
 
         self.wasMaximized = False
 
+        self.filter_connection_error = []
+
+    def on_connection_error(self, server_name):
+        if server_name in self.filter_connection_error:
+            return
+        self.filter_connection_error.append(server_name)
+        conf = ConfirmationDialog(str(server_name) + " is not connected\r\n"
+                                                     "Send a WAKE ON LAN Signal ?", self)
+        if conf.exec_():
+            list_servers.server(server_name).wake_on_lan()
+        else:
+            pass
+
+    def on_connection(self, server_name):
+        self.filter_connection_error.remove(server_name)
+
     def add_model(self, name, model):
         self.models.append((name, model))
 
     def get_model(self, name):
         for model_name, model in self.models:
             if model_name == name:
-                model.refresh()
+                # model.refresh()
                 return model
         raise Exception("Model "+name+" not found")
 
-    def test(self, movie):
-        print("http://192.168.1.55:4242/video/" + str(movie["video_id"]) + "/stream")
-        self.media_player.load("http://192.168.1.55:4242/video/" + str(movie["video_id"]) + "/stream")
+    def test(self, video):
+        uri = list_servers.server(video["server"]).get_stream(video["video_id"])
+        print(uri)
+        self.media_player.load(uri)
         self.stack.setCurrentWidget(self.media_player)
-        print(movie)
+        print(video)
 
     def play_row(self, path):
         self.media_player.load(path)

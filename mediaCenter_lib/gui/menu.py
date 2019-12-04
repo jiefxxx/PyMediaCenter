@@ -20,16 +20,16 @@ class VideoMenu(QMenu):
         conf = ConfirmationDialog("delete video " + str(self.video["video_id"]), self)
         if conf.exec_():
             print("yeah")
-            self._window.get_model("video").delete(self.video["video_id"])
+            self._window.get_model("video").delete(self.video)
 
     def video_movie_edit(self, checked):
         dlg = TmdbDialog("find movie", self)
         if dlg.exec_() and dlg.info is not None:
             print("yeah")
-            self._window.get_model("video").edit(self.video["video_id"], 1, dlg.info["id"])
+            self._window.get_model("video").edit(self.video, 1, dlg.info["id"])
 
     def video_download(self):
-        self._window.get_model("upload").add_download(self.video["video_id"], "/home/jief/Téléchargements")
+        self._window.get_model("upload").add_download(self.video, "/home/jief/Téléchargements")
 
 
 

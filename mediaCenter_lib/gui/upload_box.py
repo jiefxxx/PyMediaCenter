@@ -1,6 +1,6 @@
 import os
 
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QTableView, QHeaderView, QAbstractItemView
+from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QTableView, QHeaderView, QAbstractItemView, QComboBox
 
 from mediaCenter_lib.gui.dialogs import TmdbDialog
 from mediaCenter_lib.gui.widget import QIconButton
@@ -14,9 +14,10 @@ class UploadBox(QWidget):
         self.vbox.addLayout(self.hbox)
         self.setLayout(self.vbox)
 
+        self.model = self.window().get_model("upload")
+
         self.add_button = QIconButton("rsc/icones/add.png", self)
         self.add_button.clicked.connect(self.add)
-
         self.movie_button = QIconButton("rsc/icones/movies.png", self)
         self.movie_button.clicked.connect(self.info)
         self.del_button = QIconButton("rsc/icones/garbage.png", self)
@@ -28,6 +29,8 @@ class UploadBox(QWidget):
         self.send_button = QIconButton("rsc/icones/up.png", self)
         self.send_button.setMinimumHeight(32)
         self.send_button.clicked.connect(self.send)
+        self.server_chooser = QComboBox(self)
+        self.server_chooser.insertItems(0, self.model.get_servers())
 
         self.hbox.addWidget(self.add_button)
         self.hbox.addWidget(self.remove_button)
@@ -35,11 +38,11 @@ class UploadBox(QWidget):
         self.hbox.addStretch(stretch=True)
         self.hbox.addWidget(self.movie_button)
         self.hbox.addStretch(stretch=True)
+        self.hbox.addWidget(self.server_chooser)
         self.hbox.addWidget(self.del_button)
         self.hbox.addWidget(self.send_button)
 
         self.table = QTableView(self)
-        self.model = self.window().get_model("upload")
         self.table.setModel(self.model)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.table.horizontalHeader().setMaximumSectionSize(700)
@@ -48,7 +51,7 @@ class UploadBox(QWidget):
 
     def send(self):
         for index in self.table.selectionModel().selectedRows():
-            self.model.send(index)
+            self.model.send(index, self.server_chooser.currentText())
 
     def play(self):
         if len(self.table.selectionModel().selectedRows()) > 0:
