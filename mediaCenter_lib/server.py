@@ -1,4 +1,5 @@
 import json
+import socket
 import time
 
 import requests
@@ -185,7 +186,7 @@ class Server(QObject):
                 self.webSocket_conn = websocket.WebSocket()
                 self.webSocket_conn.connect('ws://' + self.address + ":" + str(self.port) + '/scripts', timeout=1)
                 self.manager.connected.emit(self.name)
-            except (ConnectionRefusedError, websocket._exceptions.WebSocketAddressException):
+            except (ConnectionRefusedError, websocket._exceptions.WebSocketAddressException, socket.timeout):
                 self.webSocket_conn = None
                 self.manager.connection_error.emit(self.name)
                 time.sleep(5)
