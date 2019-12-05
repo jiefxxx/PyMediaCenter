@@ -29,7 +29,7 @@ pyconfig.load("pymediacenter", proc_name="pymediacenter-gui", callback=configure
 
 list_servers = ServersManager()
 # list_servers.new("local", "127.0.0.1")
-list_servers.new("server", "192.168.1.55", ethernet="6c:f0:49:56:03:c8")
+list_servers.new("server", "192.168.1.38", ethernet="6c:f0:49:56:03:c8")
 
 
 class MainWindow(QMainWindow):

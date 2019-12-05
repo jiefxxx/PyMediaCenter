@@ -16,12 +16,6 @@ class ScriptsRoom(WebSocketRoom):
 
     def on_close(self, client):
         print("close client", client)
-        self.last_time = time.time()
-
-    def get_last_time(self):
-        if len(self.clients) == 0:
-            return self.last_time
-        return time.time()
 
     def notify_refresh(self, section):
         self.notify(NOTIFY_REFRESH, section)

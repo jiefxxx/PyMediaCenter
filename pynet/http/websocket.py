@@ -2,6 +2,7 @@ import base64
 import hashlib
 import json
 import struct
+import time
 
 from pynet.http.tools import HTTP_CONNECTION_ABORT, HTTP_CONNECTION_UPGRADE
 
@@ -104,6 +105,7 @@ class WebSocketRoom:
     def __init__(self, name=None):
         self.clients = []
         self.name = name
+        self.last_pong = time.time()
 
     def new_client(self, client):
         if client not in self.clients:
@@ -117,7 +119,7 @@ class WebSocketRoom:
         if message[1] == 9:
             client.send((1, 10, message[2]))
         elif message[1] == 0x0A:
-            pass
+            self.last_pong = time.time()
         elif message[1] == 8:
             self.on_close(client)
             self.clients.remove(client)
@@ -130,8 +132,9 @@ class WebSocketRoom:
 
     @threaded("httpServer")
     def on_error(self, client):
-        self.on_close(client)
-        self.clients.remove(client)
+        if client in self.clients:
+            self.on_close(client)
+            self.clients.remove(client)
 
     def on_message(self, client, message):
         pass

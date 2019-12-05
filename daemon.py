@@ -29,8 +29,8 @@ pyconfig.load("pymediacenter", proc_name="pymediacenter-daemon", callback=config
 async def power_management(sys_com):
     while True:
         sys_com.ping_all()
-        await asyncio.sleep(60)
-        if sys_com.get_last_time()+20*60 < time.time():
+        await asyncio.sleep(30)
+        if sys_com.last_pong+20*60 < time.time():
             print("entering power saving mode")
             os.system("sudo pm-suspend")
 

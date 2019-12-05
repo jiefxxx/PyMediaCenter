@@ -65,6 +65,7 @@ class HTTPConnection:
         self.queue = janus.Queue(maxsize=100, loop=loop)
         self.server, self.writer, self.reader = server, writer, reader
         self.alive = True
+        self.stream_reader = None
 
     def is_alive(self):
         return self.alive
@@ -93,6 +94,8 @@ class HTTPConnection:
             self.queue.sync_q.put(None)
 
     def kill(self):
+        if self.stream_reader:
+            self.stream_reader.error()
         self.alive = False
         self.writer.close()
 
@@ -140,8 +143,8 @@ class HTTPConnection:
             return self.close()
 
         elif prepare_return == HTTP_CONNECTION_UPGRADE:
-            stream_reader = handler.upgraded_streamReader
-            if not await feed_stream_reader(self.reader, stream_reader):
+            self.stream_reader = handler.upgraded_streamReader
+            if not await feed_stream_reader(self.reader, self.stream_reader):
                 self.kill()
 
             return self.close()
