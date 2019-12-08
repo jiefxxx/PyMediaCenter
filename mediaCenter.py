@@ -20,16 +20,19 @@ from mediaCenter_lib.model.video import VideoModel
 from mediaCenter_lib.server import ServersManager
 
 from pythread import create_new_mode, close_all_mode
-from pythread.modes import ProcessMode
+from pythread.modes import ProcessMode, AsyncioMode
 
 from common_lib.config import configure_callback
 import pyconfig
 
 pyconfig.load("pymediacenter", proc_name="pymediacenter-gui", callback=configure_callback)
 
-list_servers = ServersManager()
+create_new_mode(ProcessMode, "httpCom", size=4)
+create_new_mode(ProcessMode, "poster", size=2)
+create_new_mode(AsyncioMode, "asyncio")
+
+list_servers = ServersManager("client", ["6c:f0:49:56:03:c8"])
 # list_servers.new("local", "127.0.0.1")
-list_servers.new("server", "192.168.1.38", ethernet="6c:f0:49:56:03:c8")
 
 
 class MainWindow(QMainWindow):
@@ -126,10 +129,6 @@ class MainWindow(QMainWindow):
             if b is None or False:
                 self.wasMaximized = self.isMaximized()
                 self.showFullScreen()
-
-
-create_new_mode(ProcessMode, "httpCom", size=4)
-create_new_mode(ProcessMode, "poster", size=2)
 
 app = QApplication(sys.argv)
 window = MainWindow()

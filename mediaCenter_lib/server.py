@@ -1,3 +1,4 @@
+import asyncio
 import json
 import socket
 import time
@@ -8,8 +9,10 @@ from PyQt5.QtCore import QObject, pyqtSignal
 from requests_toolbelt import MultipartEncoderMonitor
 from wakeonlan import send_magic_packet
 
+import pythread
 from common_lib.config import NOTIFY_REFRESH, NOTIFY_PROGRESS
 from common_lib.fct import convert_size
+from pynet.multicast import create_multicast_server
 from pythread import create_new_mode
 from pythread.modes import RunForeverMode
 
@@ -221,9 +224,20 @@ class ServersManager(QObject):
     disconnected = pyqtSignal('PyQt_PyObject')
     refresh = pyqtSignal('PyQt_PyObject', 'PyQt_PyObject')
 
-    def __init__(self):
+    def __init__(self, name, list_wol=None):
         QObject.__init__(self)
+        self.list_wol = list_wol
+        if not list_wol:
+            self.list_wol = []
         self.servers_list = []
+        self.loop = None
+        self.name = name
+        self.proto = self.run().result()
+        self.send_wol()
+
+    def send_wol(self):
+        for ethernet in self.list_wol:
+            send_magic_packet(ethernet)
 
     def new(self, name, address, **kwargs):
         self.servers_list.append(Server(self, address, name, **kwargs))
@@ -234,12 +248,33 @@ class ServersManager(QObject):
                 return server
         raise Exception("Server not found")
 
+    def server_exist(self, name):
+        for server in self.servers_list:
+            if server.name == name:
+                return True
+        return False
+
     def all(self):
         return self.servers_list
 
     def close(self):
         for server in self.servers_list:
             server.close()
+
+    @pythread.threaded("asyncio")
+    async def run(self):
+        self.loop = asyncio.get_event_loop()
+        coro = create_multicast_server(self.loop, self.name, self.on_notify)
+        return self.loop.create_task(coro)
+
+    @pythread.threaded("asyncio")
+    async def find_peer(self):
+        self.proto.send_who()
+
+    def on_notify(self, name, addr):
+        if not self.server_exist(name) and not name[:6] == "client":
+            self.new(name, addr)
+            print("new ", addr, name)
 
 
 

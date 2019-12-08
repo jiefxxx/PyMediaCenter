@@ -1,5 +1,7 @@
+import asyncio
+
 from pythread.threadreturn import ThreadReturn
-from pythread.threads import ProcessThread, RunForeverThread, RunOnceThread
+from pythread.threads import ProcessThread, RunForeverThread, RunOnceThread, AsyncioThread
 
 
 class ThreadMode:
@@ -33,6 +35,30 @@ class ProcessMode(ThreadMode):
     def close(self):
         for thread in self._threads:
             thread.close()
+
+
+class AsyncioMode(ThreadMode):
+    def __init__(self, name, debug=False):
+        ThreadMode.__init__(self, name, debug)
+        self._thread = AsyncioThread(name, debug)
+        self._thread.get_loop()
+
+    def loop(self):
+        return self._thread.get_loop()
+
+    def process(self, fct, *args, **kwargs):
+        return self.exec(fct(*args, **kwargs))
+
+    def exec(self, coro):
+        if self._thread.loop:
+            return asyncio.run_coroutine_threadsafe(coro, self._thread.get_loop())
+        raise Exception(self._thread.getName()+" is not connected")
+
+    def close(self):
+        self._thread.close()
+
+    def join(self):
+        self._thread.join()
 
 
 class RunForeverMode(ThreadMode):

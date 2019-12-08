@@ -1,6 +1,8 @@
+import asyncio
 import queue
 import sys
 import threading
+import time
 import traceback
 
 
@@ -87,6 +89,31 @@ class RunOnceThread(Thread):
         with self.sync:
             Thread.close(self)
             self.sync.notify_all()
+
+
+class AsyncioThread(Thread):
+    def __init__(self, name, debug=True):
+        Thread.__init__(self, name, debug)
+        self.loop = None
+        self.start()
+
+    def get_loop(self):
+        while not self.loop:
+            time.sleep(0.01)
+        return self.loop
+
+    def _run_asyncio(self):
+        self.loop = asyncio.new_event_loop()
+        self.loop.run_forever()
+        return False
+
+    def _run(self):
+        debug_print(self, "execute asyncio in ", self.getName())
+        return self._run_asyncio()
+
+    def close(self):
+        self.loop.call_soon_threadsafe(self.loop.stop)
+        Thread.close(self)
 
 
 class RunForeverThread(Thread):

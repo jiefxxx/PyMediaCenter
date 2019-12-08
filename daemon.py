@@ -17,6 +17,7 @@ from daemon_lib.ws_room import ScriptsRoom
 from pydbm import DataBase
 
 from pynet.http.server import HTTPServer
+from pynet.multicast import create_multicast_server
 
 from pythread import close_all_mode
 
@@ -33,6 +34,10 @@ async def power_management(sys_com):
         if sys_com.last_pong+20*60 < time.time():
             print("entering power saving mode")
             os.system("sudo pm-suspend")
+
+
+def print_iam(addr, name):
+    print("new client", addr, name)
 
 
 database = DataBase(pyconfig.get("database.path"))
@@ -58,13 +63,15 @@ http_server.add_route("/upload", UploadHandler)
 
 http_server.initialize()
 _loop.set_debug(False)
-_loop.create_task(power_management(scripts_room))
+protocol = _loop.run_until_complete(create_multicast_server(_loop, "server", print_iam))
+# _loop.create_task(power_management(scripts_room))
 try:
     _loop.run_forever()
 except KeyboardInterrupt:
     pass
 
 # Close the server
+protocol.close()
 http_server.close()
 _loop.close()
 database_scripts.close()
