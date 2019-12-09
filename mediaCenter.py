@@ -1,7 +1,6 @@
 #! python3
 
 import sys
-import time
 
 from PyQt5.QtWidgets import QApplication, QMainWindow, QStackedWidget, QTabWidget
 
@@ -15,7 +14,7 @@ from mediaCenter_lib.gui.videos import Videos
 from mediaCenter_lib.model.genre import GenreModel
 from mediaCenter_lib.model.movie import MovieModel
 from mediaCenter_lib.model.upload import UploadVideoModel
-from mediaCenter_lib.model.server import ServerActionModel
+from mediaCenter_lib.model.server import ServerModel
 from mediaCenter_lib.model.video import VideoModel
 from mediaCenter_lib.server import ServersManager
 
@@ -31,7 +30,7 @@ create_new_mode(ProcessMode, "httpCom", size=4)
 create_new_mode(ProcessMode, "poster", size=2)
 create_new_mode(AsyncioMode, "asyncio")
 
-list_servers = ServersManager("client", ["6c:f0:49:56:03:c8"])
+list_servers = ServersManager("client_"+pyconfig.get("hostname"), ["6c:f0:49:56:03:c8"])
 # list_servers.new("local", "127.0.0.1")
 
 
@@ -44,7 +43,7 @@ class MainWindow(QMainWindow):
         self.add_model("genre", GenreModel(list_servers))
         self.add_model("movie", MovieModel(list_servers, connect=self.get_model("video")))
         self.add_model("upload", UploadVideoModel(list_servers))
-        self.add_model("server", ServerActionModel(list_servers))
+        self.add_model("server", ServerModel(list_servers))
         list_servers.connection_error.connect(self.on_connection_error)
         list_servers.connected.connect(self.on_connection)
 
@@ -129,6 +128,7 @@ class MainWindow(QMainWindow):
             if b is None or False:
                 self.wasMaximized = self.isMaximized()
                 self.showFullScreen()
+
 
 app = QApplication(sys.argv)
 window = MainWindow()

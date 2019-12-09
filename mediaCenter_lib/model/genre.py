@@ -23,7 +23,7 @@ class GenreModel(ServerStateHandler, ModelTableListDict):
 
     @threaded("httpCom")
     def refresh(self):
-        server = self.servers.all()[0]
+        server = list(self.servers.all())[0]
         data = server.get_genres()
         data += [{"name": "Tous", "id": 0}]
         self.reset_data(data)

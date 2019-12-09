@@ -1,8 +1,11 @@
+import os
+
 import pyconfig
 
 
 def configure_callback():
 
+    pyconfig.create("hostname", default=os.uname()[1])
     pyconfig.create("language", default="fr_be")
     pyconfig.create("tmdb.api_key", default='bd00b4d04b286b876c3455692a531120')
     pyconfig.create("videos.downloads.path", default=[])

@@ -30,7 +30,8 @@ class UploadBox(QWidget):
         self.send_button.setMinimumHeight(32)
         self.send_button.clicked.connect(self.send)
         self.server_chooser = QComboBox(self)
-        self.server_chooser.insertItems(0, self.model.get_servers())
+        self.server_chooser.setModel(self.window().get_model("server"))
+        self.server_chooser.setSizeAdjustPolicy(QComboBox.AdjustToContents)
 
         self.hbox.addWidget(self.add_button)
         self.hbox.addWidget(self.remove_button)

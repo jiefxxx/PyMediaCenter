@@ -254,8 +254,10 @@ class ServersManager(QObject):
                 return True
         return False
 
-    def all(self):
-        return self.servers_list
+    def all(self, connected=False):
+        for server in self.servers_list:
+            if server.webSocket_conn or not connected:
+                yield server
 
     def close(self):
         for server in self.servers_list:
