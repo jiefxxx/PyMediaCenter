@@ -31,7 +31,7 @@ create_new_mode(ProcessMode, "poster", size=2)
 create_new_mode(AsyncioMode, "asyncio")
 
 list_servers = ServersManager("client_"+pyconfig.get("hostname"), ["6c:f0:49:56:03:c8"])
-# list_servers.new("local", "127.0.0.1")
+#list_servers.new("local", "192.168.1.40")
 
 
 class MainWindow(QMainWindow):

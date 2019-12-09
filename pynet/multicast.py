@@ -49,7 +49,7 @@ class EchoClientProtocol(BaseProtocol):
         self.transport.close()
 
 
-async def create_multicast_server(loop, server_name, callback, addr=('224.254.29.71', 10000)):
+async def create_multicast_server(loop, server_name, callback, addr=('239.255.255.253', 10000)):
     transport, protocol = await  loop.create_datagram_endpoint(
         lambda: EchoClientProtocol(server_name, addr, callback), sock=init_multicastSock(addr))
     return protocol
