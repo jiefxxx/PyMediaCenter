@@ -87,7 +87,8 @@ class MainWindow(QMainWindow):
             pass
 
     def on_connection(self, server_name):
-        self.filter_connection_error.remove(server_name)
+        if server_name in self.filter_connection_error:
+            self.filter_connection_error.remove(server_name)
 
     def add_model(self, name, model):
         self.models.append((name, model))
