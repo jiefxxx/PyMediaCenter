@@ -1,20 +1,20 @@
 import asyncio
 import json
-import socket
+import sys
 import time
-
+import traceback
 import requests
-import websocket
+import websockets
+
+from wakeonlan import send_magic_packet
 from PyQt5.QtCore import QObject, pyqtSignal
 from requests_toolbelt import MultipartEncoderMonitor
-from wakeonlan import send_magic_packet
+
 
 import pythread
 from common_lib.config import NOTIFY_REFRESH, NOTIFY_PROGRESS
 from common_lib.fct import convert_size
 from pynet.multicast import create_multicast_server
-from pythread import create_new_mode
-from pythread.modes import RunForeverMode
 
 
 def url_param(kwargs):
@@ -54,10 +54,15 @@ class Server(QObject):
             name = address
         self.ethernet = ethernet
         self.manager = server_manager
+
         self.name, self.address, self.port = name, address, port
         self.session = requests.Session()
+
         self.webSocket_conn = None
-        create_new_mode(RunForeverMode, "ws-" + name, self.run_webSocket)
+        self.last_data_progress = None
+
+        self.is_running = True
+        self.websocket = self.start_websocket()
 
     def wake_on_lan(self):
         if self.ethernet:
@@ -183,39 +188,48 @@ class Server(QObject):
     def start_script(self, name):
         self.get('/scripts/'+name)
 
-    def run_webSocket(self):
-        if self.webSocket_conn is None:
+    @pythread.threaded("asyncio")
+    async def start_websocket(self):
+        while self.is_running:
             try:
-                self.webSocket_conn = websocket.WebSocket()
-                self.webSocket_conn.connect('ws://' + self.address + ":" + str(self.port) + '/scripts', timeout=1)
-                self.manager.connected.emit(self.name)
-            except (ConnectionRefusedError,
-                    websocket._exceptions.WebSocketAddressException,
-                    socket.timeout,
-                    OSError,
-                    websocket._exceptions.WebSocketTimeoutException):
-                self.webSocket_conn = None
+                uri = 'ws://' + self.address + ":" + str(self.port) + '/scripts'
+                async with websockets.connect(uri) as _websocket:
+                    self.webSocket_conn = _websocket
+                    self.manager.connected.emit(self.name)
+                    print(self.name, "connect")
+                    while self.is_running:
+                        try:
+                            data = await asyncio.wait_for(_websocket.recv(), timeout=5)
+                            data = json.loads(data)
+                            if data["id"] == NOTIFY_REFRESH:
+                                self.manager.refresh.emit(self.name, data["data"])
+                            elif data["id"] == NOTIFY_PROGRESS:
+                                self.last_data_progress = data["data"]
+                                self.progress.emit(data["data"])
+
+                        except websockets.exceptions.ConnectionClosedError:
+                            await _websocket.close_connection()
+                            self.webSocket_conn = None
+                            self.manager.disconnected.emit(self.name)
+                            break
+
+                        except asyncio.TimeoutError:
+                            pass
+
+                    await _websocket.close()
+
+            except ConnectionRefusedError:
                 self.manager.connection_error.emit(self.name)
-                time.sleep(5)
-                return True
+                await asyncio.sleep(10)
 
-        try:
-            data = json.loads(self.webSocket_conn.recv())
-            if data["id"] == NOTIFY_REFRESH:
-                self.manager.refresh.emit(self.name, data["data"])
-            elif data["id"] == NOTIFY_PROGRESS:
-                self.progress.emit(data["data"])
-        except websocket._exceptions.WebSocketTimeoutException:
-            pass
-        except websocket._exceptions.WebSocketConnectionClosedException:
-            self.webSocket_conn = None
-            self.manager.disconnected.emit(self.name)
+            except Exception as e:
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                traceback.print_exception(exc_type, exc_value, exc_traceback, file=sys.stdout)
 
-        return True
-
-    def close(self):
-        print("close")
-        self.webSocket_conn.close()
+    @pythread.threaded("asyncio")
+    async def close(self):
+        self.is_running = False
+        await asyncio.wrap_future(self.websocket)
 
 
 class ServersManager(QObject):
@@ -260,8 +274,13 @@ class ServersManager(QObject):
                 yield server
 
     def close(self):
+        futures = []
         for server in self.servers_list:
-            server.close()
+            print("close", server.name)
+            futures.append(server.close())
+
+        for future in futures:
+            future.result()
 
     @pythread.threaded("asyncio")
     async def run(self):

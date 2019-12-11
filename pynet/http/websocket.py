@@ -117,7 +117,7 @@ class WebSocketRoom:
         if client not in self.clients:
             raise Exception("client unknown")
         if message[1] == 9:
-            client.send((1, 10, message[2]))
+            client.send(1, 10, message[2])
         elif message[1] == 0x0A:
             self.last_pong = time.time()
         elif message[1] == 8:

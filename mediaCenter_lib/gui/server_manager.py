@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QProgressBar, QLabel, QHBoxLayout, QPushButton, QTabWidget
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QProgressBar, QLabel, QHBoxLayout, QPushButton, QTabWidget, QListView
 
 
 class ActionBar(QWidget):
@@ -43,6 +43,11 @@ class InfoBar(QWidget):
 
         self.setLayout(self.hbox)
 
+    def reset(self):
+        self.label_action.setText("None")
+        self.label_info.setText("None")
+        self.progress.setValue(0)
+
     def on_progress(self, data):
         self.label_action.setText(data["script"])
         self.label_info.setText(data["string"])
@@ -52,18 +57,27 @@ class InfoBar(QWidget):
 class ServerManager(QWidget):
     def __init__(self, parent):
         QWidget.__init__(self, parent)
-        self.tab = QTabWidget(self)
-        self.main_vbox = QVBoxLayout(self)
-        self.main_vbox.addWidget(self.tab)
-        self.setLayout(self.main_vbox)
-        self.server_boxes = []
+        self.model = self.window().get_model("server")
+        self.server_list = QListView(self)
+        self.server_list.setModel(self.model)
 
-        for server in self.window().get_model("server").servers.all():
-            self.add_server(server.name)
+        self.server_info = ServerBox(None, self)
 
-    def add_server(self, server_name):
-        server = ServerBox(server_name, self)
-        self.tab.addTab(server, server_name)
+        self.main_hbox = QHBoxLayout(self)
+        self.main_hbox.addWidget(self.server_list)
+        self.main_hbox.addWidget(self.server_info, stretch=True)
+        self.setLayout(self.main_hbox)
+
+        self.selModel = self.server_list.selectionModel()
+        self.selModel.selectionChanged.connect(self.on_select)
+
+    def on_select(self, item_selection):
+        indexes = item_selection.indexes()
+        if len(indexes) == 0:
+            return
+        model_index = indexes[0]
+        data = self.model.data(model_index)
+        self.server_info.set_server(data)
 
 
 class ServerBox(QWidget):
@@ -75,23 +89,43 @@ class ServerBox(QWidget):
         self.command = ActionBar(self)
         self.info = InfoBar(self)
 
+        self.label_name = QLabel("none", self)
+
         self.main_vbox = QVBoxLayout(self)
+        self.main_vbox.addWidget(self.label_name)
         self.main_vbox.addWidget(self.command)
         self.main_vbox.addWidget(self.info)
         self.main_vbox.addStretch()
 
         self.setLayout(self.main_vbox)
+        self.reset_progress_handler(None)
 
-        self.model.get_progress_action(self.server_name).connect(self.info.on_progress)
+    def reset_progress_handler(self, server_name):
+        if self.server_name:
+            self.model.get_progress_action(self.server_name).disconnect(self.info.on_progress)
+        self.info.reset()
+        if server_name:
+            self.server_name = server_name
+            self.label_name.setText(self.server_name)
+            if self.model.get_last_progress(self.server_name):
+                self.info.on_progress(self.model.get_last_progress(self.server_name))
+            self.model.get_progress_action(self.server_name).connect(self.info.on_progress)
+
+    def set_server(self, server_data):
+        self.reset_progress_handler(server_data["name"])
 
     def on_reset(self):
-        self.model.start_script("reset_database", self.server_name)
+        if self.server_name:
+            self.model.start_script("reset_database", self.server_name)
 
     def on_genres_update(self):
-        self.model.start_script("update_genres", self.server_name)
+        if self.server_name:
+            self.model.start_script("update_genres", self.server_name)
 
     def on_files_update(self):
-        self.model.start_script("update_videos", self.server_name)
+        if self.server_name:
+            self.model.start_script("update_videos", self.server_name)
 
     def on_movies_update(self):
-        self.model.start_script("update_movies", self.server_name)
+        if self.server_name:
+            self.model.start_script("update_movies", self.server_name)

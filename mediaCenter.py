@@ -138,5 +138,5 @@ window.showMaximized()
 app.exec_()
 app.closingDown()
 
-close_all_mode()
 window.close_all_model()
+close_all_mode()

@@ -40,5 +40,8 @@ class ServerModel(ServerStateHandler, ModelTableListDict):
     def get_progress_action(self, server_name):
         return self.servers.server(server_name).progress
 
+    def get_last_progress(self, server_name):
+        return self.servers.server(server_name).last_data_progress
+
     def close(self):
         self.servers.close()
