@@ -6,8 +6,8 @@ from pythread import threaded
 
 class TmdbModel(ModelTableListDict):
     def __init__(self):
-        ModelTableListDict.__init__(self, [("Title", "title", False),
-                                           ("Release date", "release_date", False)])
+        ModelTableListDict.__init__(self, [("Title", "title", False, None),
+                                           ("Release date", "release_date", False, None)])
         self.search = SearchMovie(pyconfig.get("tmdb.api_key"))
 
     @threaded("httpCom")
@@ -15,5 +15,21 @@ class TmdbModel(ModelTableListDict):
         self.begin_busy()
         self.clear()
         for movie in self.search.search_movie(text, year, language=pyconfig.get("language")):
+            self.add_data(movie)
+        self.end_busy()
+
+
+class TmdbTvModel(ModelTableListDict):
+    def __init__(self):
+        ModelTableListDict.__init__(self, [("Title", "name", False, None),
+                                           ("Release date", "first_air_date", False, None),
+                                           ("Overview", "overview", False, None)])
+        self.search = SearchMovie(pyconfig.get("tmdb.api_key"))
+
+    @threaded("httpCom")
+    def on_search(self, text, year=None):
+        self.begin_busy()
+        self.clear()
+        for movie in self.search.search_tv(text, language=pyconfig.get("language")):
             self.add_data(movie)
         self.end_busy()

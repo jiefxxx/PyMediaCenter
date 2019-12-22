@@ -1,27 +1,28 @@
 import requests
 from PyQt5.QtCore import pyqtSignal
 
+from common_lib.fct import convert_size, convert_bit_stream, add_px, convert_duration, convert_media_type
 from mediaCenter_lib.base_model import ModelTableListDict, ServerStateHandler
 from pythread import threaded
 
 
 class VideoModel( ServerStateHandler, ModelTableListDict):
-    refreshed = pyqtSignal()
     info = pyqtSignal('PyQt_PyObject')
 
     def __init__(self, servers, **kwargs):
-        ModelTableListDict.__init__(self, [("Video ID", "video_id", False),
-                                           ("Path", "path", False),
-                                           ("Media Type", "media_type", False),
-                                           ("Media ID", "media_id", False),
-                                           ("Bit Rate", "bit_rate", False),
-                                           ("Codec", "codecs_video", False),
-                                           ("Width", "width", False),
-                                           ("Height", "height", False),
-                                           ("Size", "size", False),
-                                           ("Creation date", "m_time", False),
-                                           ("Junk", "junk", False),
-                                           ("Last", "last_time", False)], **kwargs)
+        ModelTableListDict.__init__(self, [("Video ID", "video_id", False, None),
+                                           ("Path", "path", False, None),
+                                           ("Media Type", "media_type", False, convert_media_type),
+                                           ("Media ID", "media_id", False, None),
+                                           ("Duration", "duration", False, convert_duration),
+                                           ("Bit Rate", "bit_rate", False, convert_bit_stream),
+                                           ("Size", "size", False, convert_size),
+                                           ("Codec", "codecs_video", False, None),
+                                           ("Width", "width", False, add_px),
+                                           ("Height", "height", False, add_px),
+                                           ("Creation date", "m_time", False, None),
+                                           ("Junk", "junk", False, None),
+                                           ("Last", "last_time", False, None)], **kwargs)
 
         ServerStateHandler.__init__(self, servers)
         self.refresh()
@@ -43,7 +44,7 @@ class VideoModel( ServerStateHandler, ModelTableListDict):
             data += list(server.get_videos(columns=list(self.get_keys())))
 
         self.reset_data(data)
-        self.refreshed.emit()
+        self.end_refreshed()
 
     @threaded("httpCom")
     def delete(self, video):

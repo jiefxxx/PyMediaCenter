@@ -100,6 +100,9 @@ class WebSocketClient:
     def ping(self):
         self.send(1, 0x09, b"42")
 
+    def close(self):
+        self.connection.close()
+
 
 class WebSocketRoom:
     def __init__(self, name=None):
@@ -122,6 +125,8 @@ class WebSocketRoom:
             self.last_pong = time.time()
         elif message[1] == 8:
             self.on_close(client)
+            client.send(1, 8, message[2])
+            client.close()
             self.clients.remove(client)
         elif message[1] == 1:
             self.on_message(client, message[2].decode())

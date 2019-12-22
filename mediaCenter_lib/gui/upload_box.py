@@ -2,7 +2,7 @@ import os
 
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QTableView, QHeaderView, QAbstractItemView, QComboBox
 
-from mediaCenter_lib.gui.dialogs import TmdbDialog
+from mediaCenter_lib.gui.dialogs import TmdbDialog, TvMakerDialog, TmdbTvDialog
 from mediaCenter_lib.gui.widget import QIconButton
 
 
@@ -20,6 +20,8 @@ class UploadBox(QWidget):
         self.add_button.clicked.connect(self.add)
         self.movie_button = QIconButton("rsc/icones/movies.png", self)
         self.movie_button.clicked.connect(self.info)
+        self.tv_button = QIconButton("rsc/icones/tv_shows.png", self)
+        self.tv_button.clicked.connect(self.info_tv)
         self.del_button = QIconButton("rsc/icones/garbage.png", self)
         self.del_button.clicked.connect(self.delete)
         self.play_button = QIconButton("rsc/icones/play.png", self)
@@ -38,6 +40,7 @@ class UploadBox(QWidget):
         self.hbox.addWidget(self.play_button)
         self.hbox.addStretch(stretch=True)
         self.hbox.addWidget(self.movie_button)
+        self.hbox.addWidget(self.tv_button)
         self.hbox.addStretch(stretch=True)
         self.hbox.addWidget(self.server_chooser)
         self.hbox.addWidget(self.del_button)
@@ -76,6 +79,16 @@ class UploadBox(QWidget):
             dlg = TmdbDialog(video['path'], self)
             if dlg.exec_() and dlg.info is not None:
                 self.model.set_info(index, dlg.info)
+
+    def info_tv(self):
+        videos = []
+        for index in self.table.selectionModel().selectedRows():
+            videos.append(self.model.data(index))
+        dlg = TmdbTvDialog(self)
+        if dlg.exec_() and dlg.info is not None:
+            dlg2 = TvMakerDialog(videos, dlg.info, self)
+            if dlg2.exec_() and dlg2.model.list:
+                self.model.update_video_set(dlg2.model.list)
 
     def delete(self):
         while True:

@@ -1,4 +1,5 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QProgressBar, QLabel, QHBoxLayout, QPushButton, QTabWidget, QListView
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QProgressBar, QLabel, QHBoxLayout, QPushButton, QTabWidget, QListView, \
+    QTableView
 
 
 class ActionBar(QWidget):
@@ -9,14 +10,23 @@ class ActionBar(QWidget):
         self.button_update_files.clicked.connect(self.parent().on_files_update)
         self.button_update_movies = QPushButton("Mise à jour des films", self)
         self.button_update_movies.clicked.connect(self.parent().on_movies_update)
+        self.button_update_tvs = QPushButton("Mise à jour des series", self)
+        self.button_update_tvs.clicked.connect(self.parent().on_tvs_update)
         self.button_update_genres = QPushButton("Mise à jour des genres", self)
         self.button_update_genres.clicked.connect(self.parent().on_genres_update)
         self.button_reset = QPushButton("Reset database", self)
         self.button_reset.clicked.connect(self.parent().on_reset)
+        self.button_reset_movies = QPushButton("Reset database films", self)
+        self.button_reset_movies.clicked.connect(self.parent().on_movies_reset)
+        self.button_reset_tvs = QPushButton("Reset database series", self)
+        self.button_reset_tvs.clicked.connect(self.parent().on_tvs_reset)
         self.hbox.addWidget(self.button_update_files)
         self.hbox.addWidget(self.button_update_movies)
+        self.hbox.addWidget(self.button_update_tvs)
         self.hbox.addWidget(self.button_update_genres)
         self.hbox.addWidget(self.button_reset)
+        self.hbox.addWidget(self.button_reset_movies)
+        self.hbox.addWidget(self.button_reset_tvs)
         self.hbox.addStretch()
         self.setLayout(self.hbox)
 
@@ -25,33 +35,12 @@ class InfoBar(QWidget):
     def __init__(self, parent):
         QWidget.__init__(self, parent)
         self.hbox = QHBoxLayout(self)
-
-        label_pre_action = QLabel("action en cours", self)
-        self.label_action = QLabel("None", self)
-        label_pre_info = QLabel("Info : ", self)
-        self.label_info = QLabel("None", self)
-        self.progress = QProgressBar(self)
-        self.progress.setMinimum(0)
-        self.progress.setMaximum(2000)
-
-        self.hbox.addWidget(label_pre_action)
-        self.hbox.addWidget(self.label_action)
-        self.hbox.addWidget(label_pre_info)
-        self.hbox.addWidget(self.label_info)
-        self.hbox.addWidget(self.progress)
-        self.hbox.addStretch()
-
+        self.table = QTableView(self)
+        self.hbox.addWidget(self.table)
         self.setLayout(self.hbox)
 
-    def reset(self):
-        self.label_action.setText("None")
-        self.label_info.setText("None")
-        self.progress.setValue(0)
-
-    def on_progress(self, data):
-        self.label_action.setText(data["script"])
-        self.label_info.setText(data["string"])
-        self.progress.setValue(data["progress"]*2000)
+    def reset(self, server):
+        self.table.setModel(server.model)
 
 
 class ServerManager(QWidget):
@@ -98,21 +87,11 @@ class ServerBox(QWidget):
         self.main_vbox.addStretch()
 
         self.setLayout(self.main_vbox)
-        self.reset_progress_handler(None)
-
-    def reset_progress_handler(self, server_name):
-        if self.server_name:
-            self.model.get_progress_action(self.server_name).disconnect(self.info.on_progress)
-        self.info.reset()
-        if server_name:
-            self.server_name = server_name
-            self.label_name.setText(self.server_name)
-            if self.model.get_last_progress(self.server_name):
-                self.info.on_progress(self.model.get_last_progress(self.server_name))
-            self.model.get_progress_action(self.server_name).connect(self.info.on_progress)
 
     def set_server(self, server_data):
-        self.reset_progress_handler(server_data["name"])
+        self.server_name = server_data["server"].name
+        self.label_name.setText(server_data["server"].name)
+        self.info.reset(server_data["server"])
 
     def on_reset(self):
         if self.server_name:
@@ -129,3 +108,15 @@ class ServerBox(QWidget):
     def on_movies_update(self):
         if self.server_name:
             self.model.start_script("update_movies", self.server_name)
+
+    def on_tvs_update(self):
+        if self.server_name:
+            self.model.start_script("update_tvs", self.server_name)
+
+    def on_movies_reset(self):
+        if self.server_name:
+            self.model.start_script("reset_movies", self.server_name)
+
+    def on_tvs_reset(self):
+        if self.server_name:
+            self.model.start_script("reset_tvs", self.server_name)

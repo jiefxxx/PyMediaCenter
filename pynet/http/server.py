@@ -93,6 +93,10 @@ class HTTPConnection:
         if self.alive:
             self.queue.sync_q.put(None)
 
+    async def async_close(self):
+        if self.alive:
+            await self.queue.async_q.put(None)
+
     def kill(self):
         if self.stream_reader:
             self.stream_reader.error()
@@ -131,7 +135,7 @@ class HTTPConnection:
             prepare_return = handler.prepare()
 
         if prepare_return == HTTP_CONNECTION_ABORT:
-            return self.close()
+            return await self.async_close()
 
         elif prepare_return == HTTP_CONNECTION_CONTINUE:
             data_count = int(header.fields.get("Content-Length", default='0'))
@@ -140,16 +144,16 @@ class HTTPConnection:
 
             await self.execute(handler).async_wait()
 
-            return self.close()
+            return await self.async_close()
 
         elif prepare_return == HTTP_CONNECTION_UPGRADE:
             self.stream_reader = handler.upgraded_streamReader
             if not await feed_stream_reader(self.reader, self.stream_reader):
                 self.kill()
 
-            return self.close()
+            return await self.async_close()
 
-        self.close()
+        return await self.async_close()
 
 
 class HTTPRouter:

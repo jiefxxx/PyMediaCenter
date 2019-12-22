@@ -10,19 +10,18 @@ from pythread import threaded
 
 
 class MovieModel(ServerStateHandler, ModelTableListDict):
-    refreshed = pyqtSignal()
     info = pyqtSignal('PyQt_PyObject')
 
     def __init__(self, servers,  **kwargs):
-        ModelTableListDict.__init__(self, [("#", None, False),
-                                           ("Title", "title", False),
-                                           ("Original Title", "original_title", False),
-                                           ("Video ID", "video_id", False),
-                                           ("Genre ID", "genre_ids", False),
-                                           ("Duration", "duration", False),
-                                           ("Release date", "release_date", False),
-                                           ("Vote", "vote_average", False),
-                                           ("Poster", "poster_path")], **kwargs)
+        ModelTableListDict.__init__(self, [("#", None, False, None),
+                                           ("Title", "title", False, None),
+                                           ("Original Title", "original_title", False, None),
+                                           ("Video ID", "video_id", False, None),
+                                           ("Genres", "genre_name", False, None),
+                                           ("Duration", "duration", False, None),
+                                           ("Release date", "release_date", False, None),
+                                           ("Vote", "vote_average", False, None),
+                                           ("Poster", "poster_path", False, None)], **kwargs)
 
         self.poster_mini_path = pyconfig.get("rsc.poster_mini_path")
         self.poster_original_path = pyconfig.get("rsc.poster_original_path")
@@ -46,7 +45,7 @@ class MovieModel(ServerStateHandler, ModelTableListDict):
         for server in self.servers.all():
             data += list(server.get_movies(columns=list(self.get_keys())))
         self.reset_data(data)
-        self.refreshed.emit()
+        self.end_refreshed()
 
     @threaded("httpCom")
     def get_info(self, video):

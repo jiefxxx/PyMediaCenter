@@ -69,6 +69,9 @@ class RunForeverMode(ThreadMode):
     def process(self, fct, *args, **kwargs):
         self._thread.reset(fct, args, kwargs)
 
+    def is_alive(self):
+        return self._thread.is_alive()
+
     def close(self):
         self._thread.close()
 

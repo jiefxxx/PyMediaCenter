@@ -340,7 +340,7 @@ class MovieInfo(QWidget):
         self.title.setText(movie_info["title"])
         self.original_title.setText(movie_info["original_title"])
         self.release.setText(movie_info["release_date"])
-        self.genres_label.setText(str(movie_info["genres"]))
+        self.genres_label.setText(str(movie_info["genre_name"]))
         self.vote.setText(str(movie_info["vote_average"]))
 
         self.overview.setText(movie_info["overview"])

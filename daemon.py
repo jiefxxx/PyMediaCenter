@@ -5,7 +5,9 @@ import time
 
 import tmdbsimple as tmdb
 
-from daemon_lib.db_scripts import DBUpdateScripts
+from daemon_lib.db_scripts import GenresUpdate, FilesUpdate, TvsUpdate, MoviesUpdate
+from daemon_lib.handlers.system import Tasks
+from daemon_lib.handlers.tvs import TvShowHandler, TvEpisodeHandler
 from daemon_lib.handlers.videos import VideoHandler
 from daemon_lib.handlers.genres import GenreHandler
 from daemon_lib.handlers.movies import MovieHandler
@@ -35,6 +37,7 @@ async def power_management(sys_com):
             print("entering power saving mode")
             os.system("sudo pm-suspend")
             protocol.send_iam()
+            sys_com.last_pong = time.time()
 
 
 def print_iam(addr, name):
@@ -42,40 +45,49 @@ def print_iam(addr, name):
     # print("new client", addr, name)
 
 
-database = DataBase(pyconfig.get("database.path"))
-database.create(database_description)
-scripts_room = ScriptsRoom()
-database_scripts = DBUpdateScripts(scripts_room)
-
 tmdb.API_KEY = pyconfig.get("tmdb.api_key")
 
+database = DataBase(pyconfig.get("database.path"))
+database.create(database_description)
 
-_loop = asyncio.get_event_loop()
+scripts_room = ScriptsRoom()
+tasks = Tasks(scripts_room)
 
-http_server = HTTPServer(_loop)
+tasks.create_script(GenresUpdate())
+tasks.create_script(FilesUpdate())
+tasks.create_script(TvsUpdate())
+tasks.create_script(MoviesUpdate())
+
+loop = asyncio.get_event_loop()
+
+http_server = HTTPServer(loop)
 
 http_server.add_user_data("database", database)
 http_server.add_user_data("notify", scripts_room)
+http_server.add_user_data('tasks', tasks)
 
 http_server.add_route("/movie/?([^/]*)/?", MovieHandler)
+http_server.add_route("/tv/?([^/]*)/?", TvShowHandler)
+http_server.add_route("/episode/?([^/]*)/?", TvEpisodeHandler)
 http_server.add_route("/genre", GenreHandler)
 http_server.add_route("/video/?([^/]*)/?([^/]*)", VideoHandler)
-http_server.add_route("/scripts/?([^/]*)", ScriptHandler, ws=scripts_room, user_data={"scripts": database_scripts})
+http_server.add_route("/scripts/?([^/]*)", ScriptHandler, ws=scripts_room)
 http_server.add_route("/upload", UploadHandler)
 
 http_server.initialize()
-_loop.set_debug(False)
-protocol = _loop.run_until_complete(create_multicast_server(_loop, "server_"+pyconfig.get("hostname"), print_iam))
-# _loop.create_task(power_management(scripts_room))
+
+loop.set_debug(False)
+protocol = loop.run_until_complete(create_multicast_server(loop, "server_"+pyconfig.get("hostname"), print_iam))
+loop.create_task(power_management(scripts_room))
+
 try:
-    _loop.run_forever()
+    loop.run_forever()
 except KeyboardInterrupt:
     pass
 
 # Close the server
 protocol.close()
 http_server.close()
-_loop.close()
-database_scripts.close()
+loop.close()
 close_all_mode()
 

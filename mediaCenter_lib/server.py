@@ -12,8 +12,9 @@ from requests_toolbelt import MultipartEncoderMonitor
 
 
 import pythread
-from common_lib.config import NOTIFY_REFRESH, NOTIFY_PROGRESS
+from common_lib.config import NOTIFY_REFRESH, NOTIFY_TASK
 from common_lib.fct import convert_size
+from mediaCenter_lib.model.server import ServerTasksModel
 from pynet.multicast import create_multicast_server
 
 
@@ -46,12 +47,13 @@ class ServerNotConnected(Exception):
 
 
 class Server(QObject):
-    progress = pyqtSignal('PyQt_PyObject')
+    task = pyqtSignal('PyQt_PyObject')
 
-    def __init__(self, server_manager, address, name=None, ethernet=None, port=4242):
+    def __init__(self, server_manager, address, name, ethernet=None, port=4242):
         QObject.__init__(self)
         if not name:
             name = address
+
         self.ethernet = ethernet
         self.manager = server_manager
 
@@ -62,6 +64,7 @@ class Server(QObject):
         self.last_data_progress = None
 
         self.is_running = True
+        self.model = ServerTasksModel(server_manager, self)
         self.websocket = self.start_websocket()
 
     def wake_on_lan(self):
@@ -84,12 +87,35 @@ class Server(QObject):
     def get_json(self, path):
         return self.get(path).json()
 
+    def get_tasks(self):
+        try:
+            return list(self.get_json("/scripts/state"))
+
+        except ServerNotConnected:
+            return
+
     def get_stream(self, video_id):
         return self._server_address() + "/video/" + str(video_id) + "/stream"
 
     def get_movies(self, **kwargs):
         try:
             for el in self.get_json("/movie"+url_param(kwargs)):
+                el["server"] = self.name
+                yield el
+        except ServerNotConnected:
+            return
+
+    def get_tv_shows(self, **kwargs):
+        try:
+            for el in self.get_json("/tv"+url_param(kwargs)):
+                el["server"] = self.name
+                yield el
+        except ServerNotConnected:
+            return
+
+    def get_tv_episodes(self, **kwargs):
+        try:
+            for el in self.get_json("/episode"+url_param(kwargs)):
                 el["server"] = self.name
                 yield el
         except ServerNotConnected:
@@ -186,6 +212,7 @@ class Server(QObject):
                 callback(filename, "data invalid", 0)
 
     def start_script(self, name):
+        print("start_task", name)
         self.get('/scripts/'+name)
 
     @pythread.threaded("asyncio")
@@ -203,10 +230,9 @@ class Server(QObject):
                             data = json.loads(data)
                             if data["id"] == NOTIFY_REFRESH:
                                 self.manager.refresh.emit(self.name, data["data"])
-                            elif data["id"] == NOTIFY_PROGRESS:
+                            elif data["id"] == NOTIFY_TASK:
                                 self.last_data_progress = data["data"]
-                                self.progress.emit(data["data"])
-
+                                self.task.emit(data["data"])
                         except websockets.exceptions.ConnectionClosedError:
                             await _websocket.close_connection()
                             self.webSocket_conn = None
@@ -260,7 +286,6 @@ class ServersManager(QObject):
         for server in self.servers_list:
             if server.name == name:
                 return server
-        raise Exception("Server not found")
 
     def server_exist(self, name):
         for server in self.servers_list:
@@ -296,10 +321,3 @@ class ServersManager(QObject):
         if not self.server_exist(name) and not name[:6] == "client":
             self.new(name, addr)
             print("new ", addr, name)
-
-
-
-
-
-
-

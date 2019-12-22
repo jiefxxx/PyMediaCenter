@@ -4,6 +4,7 @@ from PyQt5.QtCore import QAbstractTableModel, pyqtSignal, QVariant, QModelIndex,
 DISPLAY_KEY = 0
 DICT_KEY = 1
 EDIT_KEY = 2
+BEFORE_KEY = 3
 
 
 class ServerStateHandler:
@@ -25,6 +26,7 @@ class ServerStateHandler:
 
 class ModelTableListDict(QAbstractTableModel):
     busy = pyqtSignal('PyQt_PyObject')
+    refreshed = pyqtSignal()
 
     def __init__(self, list_key, connect=None):
 
@@ -36,6 +38,8 @@ class ModelTableListDict(QAbstractTableModel):
         pass
 
     def rowCount(self, parent=None, *args, **kwargs):
+        if self.list is None:
+            self.list = []
         return len(self.list)
 
     def columnCount(self, parent=None, *args, **kwargs):
@@ -58,10 +62,22 @@ class ModelTableListDict(QAbstractTableModel):
             if role == Qt.DisplayRole:
                 key = self.get_key(index.column())
                 if key:
-                    return QVariant(str(self.list[index.row()][key]))
+                    before = self.get_key(index.column(), role=BEFORE_KEY)
+                    if before:
+                        return QVariant(before(self.list[index.row()][key]))
+                    else:
+                        return QVariant(self.list[index.row()][key])
 
             elif role == Qt.DecorationRole:
                 return self.get_decoration_role(index)
+
+            elif role == Qt.UserRole:
+                key = self.get_key(index.column())
+                if key:
+                    return QVariant(self.list[index.row()][key])
+
+            elif role == Qt.ToolTipRole:
+                return self.get_toolTip_role(index)
 
             elif role is None:
                 return self.list[index.row()]
@@ -131,6 +147,9 @@ class ModelTableListDict(QAbstractTableModel):
     def get_decoration_role(self, index):
         return QVariant()
 
+    def get_toolTip_role(self, index):
+        return QVariant()
+
     def clear(self):
         self.removeRows(0, self.rowCount())
 
@@ -147,6 +166,11 @@ class ModelTableListDict(QAbstractTableModel):
         self.list = data
         self.endResetModel()
 
+    def get_index_of(self, column, value):
+        for i in range(0, len(self.list)):
+            if self.list[i][column] == value:
+                return self.createIndex(i, 0)
+
     def get_key(self, column, role=DICT_KEY):
         return self.list_key[column][role]
 
@@ -160,8 +184,8 @@ class ModelTableListDict(QAbstractTableModel):
     def end_busy(self):
         self.busy.emit(False)
 
-    def refresh(self):
-        pass
+    def end_refreshed(self):
+        self.refreshed.emit()
 
     def close(self):
         pass

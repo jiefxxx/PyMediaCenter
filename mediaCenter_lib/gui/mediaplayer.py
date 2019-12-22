@@ -98,7 +98,6 @@ class MediaPlayer(QWidget):
         self.media_player.video_set_spu(track)
 
     def menu_audio_subtitles(self):
-
         audio = self.media_player.audio_get_track_description()
         subtitles = self.media_player.video_get_spu_description()
 

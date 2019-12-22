@@ -1,8 +1,10 @@
 import os
 
 import pyconfig
-from common_lib.config import MEDIA_TYPE_MOVIE
-from common_lib.videos_info import get_movie_info, check_for_space, get_normalized_file_name
+from common_lib.config import MEDIA_TYPE_MOVIE, MEDIA_TYPE_TV
+from common_lib.fct import ensure_dir
+from common_lib.videos_info import get_movie_info, check_for_space, get_normalized_file_name, get_tv_info, \
+    get_episode_info, get_normalized_episode_name
 from pynet.http.handler import HTTPHandler
 
 
@@ -48,42 +50,72 @@ class VideoHandler(HTTPHandler):
             return self.response.send_text(200, "ok ")
 
         if action == "edit":
-            media_type = int(self.header.url.get("media_type", default=None))
-            media_id = int(self.header.url.get("media_id", default=None))
-            if media_type is None or media_id is None:
+            media_type = int(self.header.url.get("media_type", default=-1))
+            if media_type == -1:
                 return self.response.send_error(400)
 
+            directory = os.path.dirname(video["path"])
+            ext = video["path"].split(".")[-1]
+            video["media_type"] = media_type
+
             if media_type == MEDIA_TYPE_MOVIE:
-                movie_info = get_movie_info(media_id, language=pyconfig.get("language"))
-                movie_info["genre_ids"] = []
-                for genre in movie_info["genres"]:
-                    movie_info["genre_ids"].append(genre["id"])
+                movie_id = int(self.header.url.get("movie_id", default=-1))
+                if movie_id == -1:
+                    return self.response.send_error(400)
 
-                directory = os.path.dirname(video["path"])
-                ext = video["path"].split(".")[-1]
+                movie_info = get_movie_info(movie_id, language=pyconfig.get("language"))
 
-                base_paths = pyconfig.get("videos.movies.path")
-                if directory not in base_paths:
-                    directory = None
-                    for path in base_paths:
-                        if check_for_space(path, video["size"]):
-                            directory = path
-                if directory is None:
-                    raise Exception("No space available in path :"+str(base_paths))
+                if movie_info is None:
+                    return self.response.send_error(404)
 
-                definitive_filename = directory + "/" + get_normalized_file_name(movie_info, ext)
-                os.rename(video["path"], definitive_filename)
-
-                video["path"] = definitive_filename
-                video["media_type"] = media_type
-                video["media_id"] = media_id
+                video["media_id"] = movie_id
 
                 db.set("videos", video)
                 db.set("movies", movie_info)
-                self.user_data["notify"].notify_refresh("video")
+
                 self.response.send_text(200, "ok " + video["path"])
+
+                directory = get_directory(directory, pyconfig.get("videos.movies.path"), video["size"])
+                definitive_filename = directory + "/" + get_normalized_file_name(movie_info, ext)
+                self.user_data["task"].new_task("rename_video", db, video, definitive_filename)
+
+            if media_type == MEDIA_TYPE_TV:
+                tv_id = int(self.header.url.get("tv_id", default=-1))
+                season = int(self.header.url.get("season", default=-1))
+                episode = int(self.header.url.get("episode", default=-1))
+
+                if tv_id == -1 or season == -1 or episode == -1:
+                    return self.response.send_error(400)
+
+                tv_info = get_tv_info(tv_id, language=pyconfig.get("language"))
+                episode_info = get_episode_info(tv_id, season, episode, language=pyconfig.get("language"))
+
+                if tv_info is None or episode_info is None:
+                    return self.response.send_error(404)
+
+                video["media_id"] = episode_info["id"]
+
+                db.set("tv_shows", tv_info)
+                db.set("tv_episodes", episode_info)
+                db.set("videos", video)
+
+                self.response.send_text(200, "ok " + video["path"])
+
+                directory = get_directory(directory, pyconfig.get("videos.tvs.path"), video["size"])
+                definitive_filename = directory + "/" + get_normalized_episode_name(tv_info, season, episode, ext)
+                ensure_dir(os.path.dirname(definitive_filename))
+                self.user_data["task"].new_task("rename_video", db, video, definitive_filename)
 
             else:
                 return self.response.send_error(400)
 
         return self.response.send_error(404)
+
+
+def get_directory(current_directory, size, list_directory):
+    if current_directory in list_directory:
+        return current_directory
+    for directory in list_directory:
+        if check_for_space(directory, size):
+            return directory
+    raise Exception("No space available in path :" + str(list_directory))

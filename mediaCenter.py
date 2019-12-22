@@ -7,12 +7,14 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QStackedWidget, QTabWidge
 from mediaCenter_lib.gui.dialogs import ConfirmationDialog
 from mediaCenter_lib.gui.mediaplayer import MediaPlayer
 from mediaCenter_lib.gui.movies import Movies
+from mediaCenter_lib.gui.tvs import Tvs
 from mediaCenter_lib.gui.upload_box import UploadBox
 from mediaCenter_lib.gui.server_manager import ServerManager
 from mediaCenter_lib.gui.videos import Videos
 
 from mediaCenter_lib.model.genre import GenreModel
 from mediaCenter_lib.model.movie import MovieModel
+from mediaCenter_lib.model.tv import TvShowModel, TvEpisodeModel
 from mediaCenter_lib.model.upload import UploadVideoModel
 from mediaCenter_lib.model.server import ServerModel
 from mediaCenter_lib.model.video import VideoModel
@@ -44,6 +46,8 @@ class MainWindow(QMainWindow):
         self.add_model("movie", MovieModel(list_servers, connect=self.get_model("video")))
         self.add_model("upload", UploadVideoModel(list_servers))
         self.add_model("server", ServerModel(list_servers))
+        self.add_model("tv_show", TvShowModel(list_servers))
+        self.add_model("tv_episode", TvEpisodeModel(list_servers))
         list_servers.connection_error.connect(self.on_connection_error)
         list_servers.connected.connect(self.on_connection)
 
@@ -56,10 +60,12 @@ class MainWindow(QMainWindow):
         self.media_player = MediaPlayer(self)
         self.server_manager = ServerManager(self)
         self.videos = Videos(self)
+        self.tvs = Tvs(self)
 
         self.tab = QTabWidget(self)
 
         self.tab.addTab(self.movies, "Films")
+        self.tab.addTab(self.tvs, "Series")
         self.tab.addTab(self.videos, "Videos")
         self.tab.addTab(self.upload, "Videos transfer")
         self.tab.addTab(self.server_manager, "config")

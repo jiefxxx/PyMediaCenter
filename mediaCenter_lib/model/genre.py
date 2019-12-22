@@ -6,11 +6,10 @@ from pythread import threaded
 
 
 class GenreModel(ServerStateHandler, ModelTableListDict):
-    refreshed = pyqtSignal()
 
     def __init__(self, servers, **kwargs):
-        ModelTableListDict.__init__(self, [("Name", "name", False),
-                                           ("ID", "id", False)],
+        ModelTableListDict.__init__(self, [("Name", "name", False, None),
+                                           ("ID", "id", False, None)],
                                     **kwargs)
         ServerStateHandler.__init__(self, servers)
         self.refresh()
@@ -24,7 +23,7 @@ class GenreModel(ServerStateHandler, ModelTableListDict):
     @threaded("httpCom")
     def refresh(self):
         server = list(self.servers.all())[0]
-        data = server.get_genres()
+        data = list(server.get_genres())
         data += [{"name": "Tous", "id": 0}]
         self.reset_data(data)
-        self.refreshed.emit()
+        self.end_refreshed()

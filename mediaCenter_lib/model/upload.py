@@ -15,12 +15,12 @@ from pythread.modes import RunForeverMode
 
 class UploadVideoModel(ModelTableListDict):
     def __init__(self, servers, **kwargs):
-        ModelTableListDict.__init__(self, [("Type", "type", False),
-                                           ("Path", "path", False),
-                                           ("Size", "size", False),
-                                           ("Edited", "edited", False),
-                                           ("Server", "server", False),
-                                           ("Status", "status", False)], **kwargs)
+        ModelTableListDict.__init__(self, [("Type", "type", False, None),
+                                           ("Path", "path", False, None),
+                                           ("Size", "size", False, None),
+                                           ("Edited", "edited", False, None),
+                                           ("Server", "server", False, None),
+                                           ("Status", "status", False, None)], **kwargs)
         self.servers = servers
         create_new_mode(RunForeverMode, "up.down", self.run_video_transfer)
 
@@ -50,6 +50,16 @@ class UploadVideoModel(ModelTableListDict):
                        "path": filename,
                        "size": convert_size(data["size"]),
                        "status": "queued"})
+
+    def update_video_set(self, videos):
+        for video in videos:
+            model_video, index = self.get_by_path(video["path"])
+            model_video.update(video)
+            model_video["edited"] = "find tv :"+model_video["name"]+" S" +\
+                                    str(model_video["season_number"])+"E" +\
+                                    str(model_video["episode_number"])
+            model_video["id"] = (model_video["tv_id"], model_video["season_number"], model_video["episode_number"])
+            self.setData(index, model_video)
 
     def get_by_path(self, path):
         for i in range(0, len(self.list)):
