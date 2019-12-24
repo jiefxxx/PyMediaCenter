@@ -101,12 +101,16 @@ class TvMakerModel(ModelTableListDict):
                                            ("S", "season_number", True, None),
                                            ("E", "episode_number", True, None),
                                            ("Validate", "validate", False, None)], **kwargs)
-
+        _list = []
         for video in videos:
-            video["name"] = tv_show["name"]
-            video["tv_id"] = tv_show["id"]
-            video["media_type"] = MEDIA_TYPE_TV
-            video["season_number"], video["episode_number"] = parse_episode_path(video["path"])
+            el = {"name": tv_show["name"],
+                  "path": video["path"],
+                  "tv_id": tv_show["id"],
+                  "media_type": MEDIA_TYPE_TV,
+                  "video": video,
+                  "season_number": parse_episode_path(video["path"])[0],
+                  "episode_number": parse_episode_path(video["path"])[1]}
+            _list.append(el)
 
-        self.reset_data(videos)
+        self.reset_data(_list)
 

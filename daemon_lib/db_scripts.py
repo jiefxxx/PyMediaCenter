@@ -9,7 +9,7 @@ from common_lib.videos_info import SearchMovie, get_video_info, get_videos, get_
 
 
 class VideoRename:
-    name = "video_rename"
+    name = "rename_video"
     refresh_type = "videos"
 
     def fct(self, task, db, video, definitive_filename):
@@ -17,7 +17,7 @@ class VideoRename:
         video["path"] = definitive_filename
         db.set("videos", video)
 
-    def descripion(self, db, video, definitive_filename):
+    def description(self, db, video, definitive_filename):
         return "Rename "+video["path"]
 
 

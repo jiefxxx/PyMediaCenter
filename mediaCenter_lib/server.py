@@ -12,7 +12,7 @@ from requests_toolbelt import MultipartEncoderMonitor
 
 
 import pythread
-from common_lib.config import NOTIFY_REFRESH, NOTIFY_TASK
+from common_lib.config import NOTIFY_REFRESH, NOTIFY_TASK, MEDIA_TYPE_MOVIE, MEDIA_TYPE_TV
 from common_lib.fct import convert_size
 from mediaCenter_lib.model.server import ServerTasksModel
 from pynet.multicast import create_multicast_server
@@ -138,10 +138,17 @@ class Server(QObject):
     def delete_video(self, video_id):
         self.get("/video/"+str(video_id)+"/delete")
 
-    def edit_video(self, video_id, media_type, media_id):
+    def edit_movie(self, video_id, movie_id):
         self.get("/video/" + str(video_id) +
-                 "/edit?media_type=" + str(media_type) +
-                 "&media_id=" + str(media_id))
+                 "/edit?media_type=" + str(MEDIA_TYPE_MOVIE) +
+                 "&movie_id=" + str(movie_id))
+
+    def edit_tv(self, video_id, tv_id, season, episode):
+        self.get("/video/" + str(video_id) +
+                 "/edit?media_type=" + str(MEDIA_TYPE_TV) +
+                 "&tv_id=" + str(tv_id) +
+                 "&season=" + str(season) +
+                 "&episode=" + str(episode))
 
     def download_video(self, video_id, filename, callback=None):
         first_time = time.time()
@@ -223,13 +230,13 @@ class Server(QObject):
                 async with websockets.connect(uri) as _websocket:
                     self.webSocket_conn = _websocket
                     self.manager.connected.emit(self.name)
-                    print(self.name, "connect")
                     while self.is_running:
                         try:
                             data = await asyncio.wait_for(_websocket.recv(), timeout=5)
                             data = json.loads(data)
                             if data["id"] == NOTIFY_REFRESH:
                                 self.manager.refresh.emit(self.name, data["data"])
+                                print("refresh", self.name, data["data"])
                             elif data["id"] == NOTIFY_TASK:
                                 self.last_data_progress = data["data"]
                                 self.task.emit(data["data"])

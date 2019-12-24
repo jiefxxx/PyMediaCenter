@@ -123,7 +123,7 @@ tv_show_table = {
 
 tv_episode_table = {
     "name": "tv_episodes",
-    "attrs": {"id":                "INTEGER NOT NULL UNIQUE",
+    "attrs": {"episode_id":        "INTEGER NOT NULL UNIQUE",
               "tv_id":             "INTEGER",
               "episode_name":      "TEXT",
               "air_date":          "TEXT",
@@ -136,7 +136,7 @@ tv_episode_table = {
                       "switch_tv_id",
                       "switch_genre_id"],
     "group_by": "video_id",
-    "auto_joins": [("videos", "media_id", "tv_episodes", " id"),
+    "auto_joins": [("videos", "media_id", "tv_episodes", "episode_id"),
                    ("tv_shows", "id", "tv_episodes", "tv_id"),
                    ("switch_tvs_genres", "switch_tv_id", "tv_shows", "id"),
                    ("genres", "genre_id", "switch_tvs_genres", "switch_genre_id")],

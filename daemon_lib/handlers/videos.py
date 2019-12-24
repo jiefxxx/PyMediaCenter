@@ -75,9 +75,9 @@ class VideoHandler(HTTPHandler):
 
                 self.response.send_text(200, "ok " + video["path"])
 
-                directory = get_directory(directory, pyconfig.get("videos.movies.path"), video["size"])
+                directory = get_directory(directory, video["size"], pyconfig.get("videos.movies.path"))
                 definitive_filename = directory + "/" + get_normalized_file_name(movie_info, ext)
-                self.user_data["task"].new_task("rename_video", db, video, definitive_filename)
+                self.user_data["tasks"].new_task("rename_video", db, video, definitive_filename)
 
             if media_type == MEDIA_TYPE_TV:
                 tv_id = int(self.header.url.get("tv_id", default=-1))
@@ -101,10 +101,10 @@ class VideoHandler(HTTPHandler):
 
                 self.response.send_text(200, "ok " + video["path"])
 
-                directory = get_directory(directory, pyconfig.get("videos.tvs.path"), video["size"])
+                directory = get_directory(directory, video["size"], pyconfig.get("videos.tvs.path"))
                 definitive_filename = directory + "/" + get_normalized_episode_name(tv_info, season, episode, ext)
                 ensure_dir(os.path.dirname(definitive_filename))
-                self.user_data["task"].new_task("rename_video", db, video, definitive_filename)
+                self.user_data["tasks"].new_task("rename_video", db, video, definitive_filename)
 
             else:
                 return self.response.send_error(400)

@@ -126,6 +126,7 @@ def get_episode_info(tv_id, season, episode, language=None):
         info["episode_name"] = info["name"]
         info["episode_vote_average"] = info["vote_average"]
         info["tv_id"] = tv_id
+        info["episode_id"] = info["id"]
         return info
     except requests.exceptions.HTTPError as e:
         print(e)

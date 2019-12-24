@@ -5,7 +5,7 @@ import time
 
 import tmdbsimple as tmdb
 
-from daemon_lib.db_scripts import GenresUpdate, FilesUpdate, TvsUpdate, MoviesUpdate
+from daemon_lib.db_scripts import GenresUpdate, FilesUpdate, TvsUpdate, MoviesUpdate, VideoRename
 from daemon_lib.handlers.system import Tasks
 from daemon_lib.handlers.tvs import TvShowHandler, TvEpisodeHandler
 from daemon_lib.handlers.videos import VideoHandler
@@ -57,6 +57,7 @@ tasks.create_script(GenresUpdate())
 tasks.create_script(FilesUpdate())
 tasks.create_script(TvsUpdate())
 tasks.create_script(MoviesUpdate())
+tasks.create_script(VideoRename())
 
 loop = asyncio.get_event_loop()
 

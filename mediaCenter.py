@@ -111,6 +111,9 @@ class MainWindow(QMainWindow):
         raise Exception("Model "+name+" not found")
 
     def test(self, video):
+        if type(video) == list:
+            video = video[0]
+            
         uri = list_servers.server(video["server"]).get_stream(video["video_id"])
         print(uri)
         self.media_player.load(uri)

@@ -34,8 +34,7 @@ class VideoModel( ServerStateHandler, ModelTableListDict):
         self.refresh()
 
     def on_refresh(self, server_name, section):
-        if section == "video":
-            self.refresh()
+        self.refresh()
 
     @threaded("httpCom")
     def refresh(self):
@@ -49,10 +48,12 @@ class VideoModel( ServerStateHandler, ModelTableListDict):
     @threaded("httpCom")
     def delete(self, video):
         self.servers.server(video["server"]).delete_video(video["video_id"])
-        self.refresh()
 
     @threaded("httpCom")
-    def edit(self, video, media_type, media_id):
-        self.serves.server(video["server"]).edit_video(video["video_id"], media_type, media_id)
-        self.refresh()
+    def edit_movie(self, video, movie_id):
+        self.servers.server(video["server"]).edit_movie(video["video_id"], movie_id)
+
+    @threaded("httpCom")
+    def edit_tv(self, video, tv_id, season, episode):
+        self.servers.server(video["server"]).edit_tv(video["video_id"], tv_id, season, episode)
 
