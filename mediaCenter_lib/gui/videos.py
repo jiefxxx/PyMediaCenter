@@ -3,8 +3,9 @@ import unicodedata
 from PyQt5.QtCore import QSortFilterProxyModel, Qt
 from PyQt5.QtGui import QCursor
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QTableView, QHeaderView, QAbstractItemView, QLineEdit, \
-    QComboBox
+    QComboBox, QCheckBox
 
+from common_lib.config import MEDIA_TYPE_MOVIE, MEDIA_TYPE_TV, MEDIA_TYPE_UNKNOWN, MEDIA_TYPE_ALL
 from mediaCenter_lib.gui.menu import VideoMenu
 
 
@@ -31,19 +32,49 @@ class Videos(QWidget):
 
         self.input = QLineEdit(self)
         self.input.textEdited.connect(self.on_input)
+
+        self.model_server = self.window().get_model("server")
+        self.model_server.servers.connected.connect(self.on_server_connection)
+
         self.combo_server = QComboBox(self)
-        self.combo_server.setModel(self.window().get_model("server"))
+        self.combo_server.setModel(self.model_server)
         self.combo_server.setSizeAdjustPolicy(QComboBox.AdjustToContents)
         self.combo_server.currentIndexChanged.connect(self.on_combo_server)
+
+        self.check_media_id = QCheckBox(self)
+        self.check_media_id.stateChanged.connect(self.on_check_media_id)
+
+        self.combo_type = QComboBox(self)
+        self.combo_type.addItem("movies", userData=MEDIA_TYPE_MOVIE)
+        self.combo_type.addItem("tvs", userData=MEDIA_TYPE_TV)
+        self.combo_type.addItem("unknowns", userData=MEDIA_TYPE_UNKNOWN)
+        self.combo_type.currentIndexChanged.connect(self.on_combo_type)
+        self.combo_type.setCurrentText("unknowns")
+
+        self.hbox.addWidget(self.combo_type)
+        self.hbox.addWidget(self.check_media_id)
         self.hbox.addWidget(self.input, stretch=True)
         self.hbox.addWidget(self.combo_server)
 
         self.vbox.addLayout(self.hbox)
         self.vbox.addWidget(self.table, stretch=True)
 
+    def on_check_media_id(self, state):
+        reverse = False
+        if state == Qt.Checked:
+            reverse = True
+
+        self.proxy.set_unknown_media(reverse)
+
+    def on_server_connection(self, server_name):
+        if self.proxy.server_name == "":
+            self.proxy.set_server(server_name)
+
+    def on_combo_type(self, index):
+        self.proxy.set_type(self.combo_type.itemData(index, role=Qt.UserRole))
+
     def on_combo_server(self, index):
         self.proxy.set_server(self.combo_server.currentText())
-
 
     def on_input(self, text):
         self.proxy.set_search_string(text)
@@ -51,7 +82,8 @@ class Videos(QWidget):
     def on_menu(self, pos):
         videos = []
         for index in self.table.selectionModel().selectedRows():
-            videos.append(self.model.data(index))
+            model_index = self.proxy.mapToSource(index)
+            videos.append(self.model.data(model_index))
 
         VideoMenu(self.window(), videos).popup(QCursor.pos())
 
@@ -79,6 +111,12 @@ class SortVideo(QSortFilterProxyModel):
         QSortFilterProxyModel.__init__(self, None)
         self.filter_string = ""
         self.server_name = ""
+        self.only_unknown = False
+        self.type = MEDIA_TYPE_UNKNOWN
+
+    def set_unknown_media(self, b):
+        self.only_unknown = b
+        self.setFilterWildcard("")
 
     def set_search_string(self, string):
         self.filter_string = string
@@ -86,6 +124,10 @@ class SortVideo(QSortFilterProxyModel):
 
     def set_server(self, server_name):
         self.server_name = server_name
+        self.setFilterWildcard("")
+
+    def set_type(self, t):
+        self.type = t
         self.setFilterWildcard("")
 
     def lessThan(self, left, right):
@@ -100,6 +142,12 @@ class SortVideo(QSortFilterProxyModel):
         data = self.sourceModel().data(index)
 
         if not data["server"] == self.server_name:
+            return False
+
+        if not data["media_type"] == self.type:
+            return False
+
+        if self.only_unknown and data["media_id"] is not None:
             return False
 
         if not filter_by_string(data, "path", self.filter_string):

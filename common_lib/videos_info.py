@@ -182,7 +182,7 @@ def parse_episode_name(path_name):
     return tv_name, saison, episode
 
 
-reg_tv_show = [r".*[s]?(\d+)[ex](\d+).*"]
+reg_tv_show = [r".*[s](\d+)[ex](\d+).*"]
 
 
 def parse_episode_path(path_name):

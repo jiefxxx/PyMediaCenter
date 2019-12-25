@@ -23,6 +23,8 @@ class DataBase:
     def __init__(self, path):
         self.db = None
         self.db_description = None
+
+        create_new_mode(ProcessMode, "db_thread")
         self.initialize_db(path)
 
     def create(self, db_description):
@@ -30,7 +32,7 @@ class DataBase:
         for table_description in db_description:
             self.create_table(table_description["name"],
                               table_description["attrs"],
-                              table_description.get("creation_constraints",None))
+                              table_description.get("creation_constraints", None))
 
     def reset_table(self, table):
         for table_description in self.db_description:
@@ -75,6 +77,7 @@ class DataBase:
                 return table_description
         return None
 
+    @threaded("db_thread", wait_return=True)
     def initialize_db(self, path):
         self.db = sqlite3.connect(path, check_same_thread=False)
 
@@ -120,10 +123,8 @@ class DataBase:
         if group_by:
             script += " GROUP BY " + group_by
 
-        with self.db as c:
-            for row in c.execute(script, tuple(data)):
-                yield row
-        self.db.commit()
+        for row in self._get_db(script, data=data):
+            yield row
 
     def update_row(self, table, row_data, only_insert=False):
         data = []
@@ -140,13 +141,7 @@ class DataBase:
             script += "?, "
         script = script[:-2] + ") "
 
-        with self.db as c:
-            try:
-                c.execute(script, tuple(data))
-            except sqlite3.InterfaceError as e:
-                print(e, script, tuple(data))
-
-        self.db.commit()
+        self._do_db(script, data=data)
 
     def delete_row(self, table, where):
         data = []
@@ -156,9 +151,7 @@ class DataBase:
         script += tmp_script
         data += tmp_data
 
-        with self.db as c:
-            c.execute(script, tuple(data))
-        self.db.commit()
+        self._do_db(script, data=data)
 
     def delete_all(self, table):
         self.delete_row(table, {})
@@ -169,16 +162,11 @@ class DataBase:
         tmp_script, tmp_data = where_to_sql(where)
         script += tmp_script
         data += tmp_data
-
-        with self.db as c:
-            c.execute(script, tuple(data))
-        self.db.commit()
+        self._do_db(script, data=data)
 
     def drop_table(self, table):
         script = "DROP TABLE IF EXISTS " + table + ";"
-        with self.db as c:
-            c.execute(script)
-        self.db.commit()
+        self._do_db(script)
 
     def create_table(self, table, constructor, end_script=None):
         script = "create table if not exists "
@@ -192,8 +180,31 @@ class DataBase:
         else:
             script = script[:-2]
         script += ")"
+        self._do_db(script)
+
+    @threaded("db_thread")
+    def _do_db(self, script, data=None):
         with self.db as c:
-            c.execute(script)
+            try:
+                if data:
+                    c.execute(script, tuple(data))
+                else:
+                    c.execute(script)
+
+            except sqlite3.InterfaceError as e:
+                print(e, script, tuple(data))
+                return
+        self.db.commit()
+
+    @threaded("db_thread", wait_return=True)
+    def _get_db(self, script, data=None):
+        with self.db as c:
+            if data:
+                for row in c.execute(script, tuple(data)):
+                    yield row
+            else:
+                for row in c.execute(script):
+                    yield row
         self.db.commit()
 
 

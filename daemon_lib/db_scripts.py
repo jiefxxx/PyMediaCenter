@@ -1,24 +1,75 @@
 import os
+import shutil
 
 import magic
 
 import pyconfig
 from common_lib.config import MEDIA_TYPE_UNKNOWN, MEDIA_TYPE_MOVIE, MEDIA_TYPE_TV
+from common_lib.fct import ensure_dir
 from common_lib.videos_info import SearchMovie, get_video_info, get_videos, get_genres, parse_movie_name, \
-    get_episode_info, parse_episode_name
+    get_episode_info, parse_episode_name, get_movie_info, get_normalized_file_name, get_tv_info, \
+    get_normalized_episode_name
+from daemon_lib.handlers.videos import get_directory
 
 
-class VideoRename:
-    name = "rename_video"
-    refresh_type = "videos"
+class MovieEdit:
+    name = "edit_movie"
+    refresh_type = "movies"
 
-    def fct(self, task, db, video, definitive_filename):
-        os.rename(video["path"], definitive_filename)
+    def fct(self, task, db, video, movie_id, directory, ext):
+        movie_info = get_movie_info(movie_id, language=pyconfig.get("language"))
+
+        if movie_info is None:
+            return
+
+        directory = get_directory(directory, video["size"], pyconfig.get("videos.movies.path"))
+        definitive_filename = directory + get_normalized_file_name(movie_info, ext)
+        if video["path"] != definitive_filename:
+            try:
+                shutil.move(video["path"], definitive_filename)
+            except FileNotFoundError:
+                pass
         video["path"] = definitive_filename
         db.set("videos", video)
 
-    def description(self, db, video, definitive_filename):
-        return "Rename "+video["path"]
+        video["media_id"] = movie_id
+
+        db.set("videos", video)
+        db.set("movies", movie_info)
+
+    def description(self, db, video, movie_id, directory, ext):
+        return "Edit Movie "+video["path"]
+
+
+class TvEdit:
+    name = "edit_tv"
+    refresh_type = "tvs"
+
+    def fct(self, task, db, tv_video, tv_id, season, episode, directory, ext):
+        tv_info = get_tv_info(tv_id, language=pyconfig.get("language"))
+        episode_info = get_episode_info(tv_id, season, episode, language=pyconfig.get("language"))
+
+        if tv_info is None or episode_info is None:
+            return
+
+        directory = get_directory(directory, tv_video["size"], pyconfig.get("videos.tvs.path"))
+        definitive_filename = directory + "/" + get_normalized_episode_name(tv_info, season, episode, ext)
+        ensure_dir(os.path.dirname(definitive_filename))
+        if tv_video["path"] != definitive_filename:
+            try:
+                shutil.move(tv_video["path"], definitive_filename)
+            except FileNotFoundError:
+                pass
+        tv_video["path"] = definitive_filename
+
+        tv_video["media_id"] = episode_info["id"]
+
+        db.set("tv_shows", tv_info)
+        db.set("tv_episodes", episode_info)
+        db.set("videos", tv_video)
+
+    def description(self, db, tv_video, tv_id, season, episode, directory, ext):
+        return "Edit Tv "+tv_video["path"]
 
 
 class GenresUpdate:

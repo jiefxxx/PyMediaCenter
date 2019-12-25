@@ -19,6 +19,7 @@ class VideoHandler(HTTPHandler):
             return self.response.send_json(200, list(db.get("videos", columns=columns,
                                         where=url.to_sql_where(blacklist=["columns"]))))
         else:
+            video_id = int(url.path.split("/")[2])
             videos = list(db.get("videos", columns=columns, where={'video_id': int(video_id)}))
 
         if len(videos) == 0:
@@ -63,21 +64,9 @@ class VideoHandler(HTTPHandler):
                 if movie_id == -1:
                     return self.response.send_error(400)
 
-                movie_info = get_movie_info(movie_id, language=pyconfig.get("language"))
+                self.user_data["tasks"].new_task("edit_movie", db, video, movie_id, directory, ext)
 
-                if movie_info is None:
-                    return self.response.send_error(404)
-
-                video["media_id"] = movie_id
-
-                db.set("videos", video)
-                db.set("movies", movie_info)
-
-                self.response.send_text(200, "ok " + video["path"])
-
-                directory = get_directory(directory, video["size"], pyconfig.get("videos.movies.path"))
-                definitive_filename = directory + "/" + get_normalized_file_name(movie_info, ext)
-                self.user_data["tasks"].new_task("rename_video", db, video, definitive_filename)
+                return self.response.send_text(200, "ok " + video["path"])
 
             if media_type == MEDIA_TYPE_TV:
                 tv_id = int(self.header.url.get("tv_id", default=-1))
@@ -87,24 +76,9 @@ class VideoHandler(HTTPHandler):
                 if tv_id == -1 or season == -1 or episode == -1:
                     return self.response.send_error(400)
 
-                tv_info = get_tv_info(tv_id, language=pyconfig.get("language"))
-                episode_info = get_episode_info(tv_id, season, episode, language=pyconfig.get("language"))
+                self.user_data["tasks"].new_task("edit_tv", db, video, tv_id, season, episode, directory, ext)
 
-                if tv_info is None or episode_info is None:
-                    return self.response.send_error(404)
-
-                video["media_id"] = episode_info["id"]
-
-                db.set("tv_shows", tv_info)
-                db.set("tv_episodes", episode_info)
-                db.set("videos", video)
-
-                self.response.send_text(200, "ok " + video["path"])
-
-                directory = get_directory(directory, video["size"], pyconfig.get("videos.tvs.path"))
-                definitive_filename = directory + "/" + get_normalized_episode_name(tv_info, season, episode, ext)
-                ensure_dir(os.path.dirname(definitive_filename))
-                self.user_data["tasks"].new_task("rename_video", db, video, definitive_filename)
+                return self.response.send_text(200, "ok " + video["path"])
 
             else:
                 return self.response.send_error(400)
