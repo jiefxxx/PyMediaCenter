@@ -5,25 +5,24 @@ from mediaCenter_lib.base_model import ModelTableListDict, ServerStateHandler
 from pythread import threaded
 
 
-class GenreModel(ServerStateHandler, ModelTableListDict):
-
-    def __init__(self, servers, **kwargs):
-        ModelTableListDict.__init__(self, [("Name", "name", False, None),
-                                           ("ID", "id", False, None)],
+class GenreModel(ModelTableListDict):
+    def __init__(self, **kwargs):
+        ModelTableListDict.__init__(self, [("Name", "name", False, None)],
                                     **kwargs)
-        ServerStateHandler.__init__(self, servers)
-        self.refresh()
+        self.reset()
 
-    def on_connection(self, server_name):
-        self.refresh()
+    def check_in(self, name):
+        for el in self.list:
+            if el['name'] == name:
+                return True
+        return False
 
-    def on_disconnection(self, server_name):
-        self.refresh()
+    def add(self, genre):
+        if not self.check_in(genre):
+            self.list.append({"name": genre})
+        self.reset_data(self.list)
 
-    @threaded("httpCom")
-    def refresh(self):
-        server = list(self.servers.all())[0]
-        data = list(server.get_genres())
-        data += [{"name": "Tous", "id": 0}]
-        self.reset_data(data)
-        self.end_refreshed()
+    def reset(self):
+        self.list = []
+        self.list.append({"name": "Tous"})
+        self.reset_data(self.list)

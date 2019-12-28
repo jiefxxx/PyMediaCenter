@@ -6,6 +6,7 @@ from PyQt5.QtGui import QIcon, QPixmap
 
 import pyconfig
 from mediaCenter_lib.base_model import ModelTableListDict, ServerStateHandler
+from mediaCenter_lib.model.genre import GenreModel
 from pythread import threaded
 
 
@@ -27,6 +28,7 @@ class MovieModel(ServerStateHandler, ModelTableListDict):
         self.poster_original_path = pyconfig.get("rsc.poster_original_path")
 
         ServerStateHandler.__init__(self, servers)
+        self.genres_model = GenreModel()
         self.refresh()
 
     def on_connection(self, server_name):
@@ -36,14 +38,18 @@ class MovieModel(ServerStateHandler, ModelTableListDict):
         self.refresh()
 
     def on_refresh(self, server_name, section):
-        if section == "video" or section == "movie":
+        if section == "movies":
             self.refresh()
 
     @threaded("httpCom")
     def refresh(self):
         data = []
+        self.genres_model.reset()
         for server in self.servers.all():
-            data += list(server.get_movies(columns=list(self.get_keys())))
+            for movie in server.get_movies(columns=list(self.get_keys())):
+                for genre in movie["genre_name"]:
+                    self.genres_model.add(genre)
+                data.append(movie)
         self.reset_data(data)
         self.end_refreshed()
 

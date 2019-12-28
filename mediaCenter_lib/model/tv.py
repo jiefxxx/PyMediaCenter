@@ -18,7 +18,7 @@ class TvShowModel(ServerStateHandler, PosterManager, ModelTableListDict):
                                            ("Title", "name", False, None),
                                            ("Original Title", "original_name", False, None),
                                            ("Tv ID", "id", False, None),
-                                           # ("Genre ID", "genre_ids", False, None),
+                                           ("Genres", "genre_name", False, None),
                                            ("Release date", "first_air_date", False, None),
                                            ("Vote", "vote_average", False, None),
                                            ("Poster", "poster_path", False, None)], **kwargs)
@@ -35,7 +35,7 @@ class TvShowModel(ServerStateHandler, PosterManager, ModelTableListDict):
         self.refresh()
 
     def on_refresh(self, server_name, section):
-        if section == "video" or section == "movie":
+        if section == "tvs":
             self.refresh()
 
     @threaded("httpCom")
@@ -79,7 +79,7 @@ class TvEpisodeModel(ServerStateHandler, PosterManager, ModelTableListDict):
         self.refresh()
 
     def on_refresh(self, server_name, section):
-        if section == "video" or section == "movie":
+        if section == "tvs":
             self.refresh()
 
     @threaded("httpCom")
@@ -113,4 +113,9 @@ class TvMakerModel(ModelTableListDict):
             _list.append(el)
 
         self.reset_data(_list)
+
+    def set_season(self, season):
+        for el in self.list:
+            el["season_number"] = int(season)
+        self.reset_data(self.list)
 

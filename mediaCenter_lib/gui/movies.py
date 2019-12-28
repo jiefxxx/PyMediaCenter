@@ -47,7 +47,7 @@ class Movies(QWidget):
         self.check_reverse.stateChanged.connect(self.on_sort_reverse)
 
         self.combo_genre = QComboBox(self)
-        self.model_genre = self.window().get_model("genre")
+        self.model_genre = self.model.genres_model
         self.model_genre.refreshed.connect(self.on_genre_refreshed)
         self.combo_genre.setModel(self.model_genre)
         self.combo_genre.setSizeAdjustPolicy(QComboBox.AdjustToContents)
@@ -92,7 +92,11 @@ class Movies(QWidget):
 
     def on_movie_refreshed(self):
         self.refresh_button.setStyleSheet("")
-        self.movie_list.selectionModel().setCurrentIndex(self.proxy.index(0, 0), QItemSelectionModel.Select)
+        if len(self.proxy.filter_genres) > 0:
+            self.combo_genre.setCurrentText(self.proxy.filter_genres[0])
+        else:
+            self.combo_genre.setCurrentText("Tous")
+        # self.movie_list.selectionModel().setCurrentIndex(self.proxy.index(0, 0), QItemSelectionModel.Select)
 
     def on_refresh(self):
         self.refresh_button.setStyleSheet("QIconButton{background-color: red;}")
@@ -187,7 +191,7 @@ class SortProxy(QSortFilterProxyModel):
         index = self.sourceModel().index(source_row, 0, source_parent)
         data = self.sourceModel().data(index)
         for genre in self.filter_genres:
-            if genre not in data["genres"]:
+            if genre not in data["genre_name"]:
                 return False
 
         if not filter_by_string(data, "title", self.filter_string):

@@ -182,7 +182,7 @@ def parse_episode_name(path_name):
     return tv_name, saison, episode
 
 
-reg_tv_show = [r".*[s](\d+)[ex](\d+).*"]
+reg_tv_show = [r".*[s](\d+)[e](\d+).*", r".*(\d+)[x](\d+).*", r".*(\d*)[x](\d+).*", r".*e(\d+).*", r"(\d*).*"]
 
 
 def parse_episode_path(path_name):
@@ -190,7 +190,10 @@ def parse_episode_path(path_name):
     for reg in reg_tv_show:
         try:
             m = re.match(reg, name.lower())
-            return int(m.group(1)), int(m.group(2))
+            if len(m.groups())==2:
+                return int(m.group(1)), int(m.group(2))
+            else:
+                return 1, int(m.group(1))
         except (AttributeError, ValueError):
             pass
 

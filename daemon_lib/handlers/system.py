@@ -44,6 +44,8 @@ class Tasks:
         self.id_count = 0
         self.tasks = []
         self.scripts = []
+        self.notify = []
+        self.last_time = time.time()
         pythread.create_new_mode(RunForeverMode, "tasks", self.run)
 
     def is_alive(self):
@@ -64,10 +66,25 @@ class Tasks:
             task.do_progress(0.0, "starting")
             task.execute()
             task.do_progress(1.0, "ended")
-            self.com.notify_refresh(task.script.refresh_type)
+
+            if task.script.refresh_type not in self.notify:
+                self.notify.append(task.script.refresh_type)
+
+            if self.last_time+60 == time.time():
+                self.clear_notify()
+
             return True
+
+        self.clear_notify()
+
         time.sleep(1)
         return True
+
+    def clear_notify(self):
+        for n in self.notify:
+            self.com.notify_refresh(n)
+        self.last_time = time.time()
+        self.notify = []
 
     def new_task(self, name, *args, **kwargs):
         task = Task(self, self.get_script(name), *args, **kwargs)

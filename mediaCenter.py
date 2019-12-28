@@ -42,7 +42,6 @@ class MainWindow(QMainWindow):
         super(MainWindow, self).__init__(*args, **kwargs)
         self.models = []
         self.add_model("video", VideoModel(list_servers))
-        self.add_model("genre", GenreModel(list_servers))
         self.add_model("movie", MovieModel(list_servers, connect=self.get_model("video")))
         self.add_model("upload", UploadVideoModel(list_servers))
         self.add_model("server", ServerModel(list_servers))

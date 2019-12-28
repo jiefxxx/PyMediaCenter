@@ -1,11 +1,10 @@
 import os
-import shutil
 
 import magic
 
 import pyconfig
 from common_lib.config import MEDIA_TYPE_UNKNOWN, MEDIA_TYPE_MOVIE, MEDIA_TYPE_TV
-from common_lib.fct import ensure_dir
+from common_lib.fct import ensure_dir, move_file
 from common_lib.videos_info import SearchMovie, get_video_info, get_videos, get_genres, parse_movie_name, \
     get_episode_info, parse_episode_name, get_movie_info, get_normalized_file_name, get_tv_info, \
     get_normalized_episode_name
@@ -26,7 +25,7 @@ class MovieEdit:
         definitive_filename = directory + get_normalized_file_name(movie_info, ext)
         if video["path"] != definitive_filename:
             try:
-                shutil.move(video["path"], definitive_filename)
+                move_file(video["path"], definitive_filename)
             except FileNotFoundError:
                 pass
         video["path"] = definitive_filename
@@ -53,11 +52,11 @@ class TvEdit:
             return
 
         directory = get_directory(directory, tv_video["size"], pyconfig.get("videos.tvs.path"))
-        definitive_filename = directory + "/" + get_normalized_episode_name(tv_info, season, episode, ext)
+        definitive_filename = directory + get_normalized_episode_name(tv_info, season, episode, ext)
         ensure_dir(os.path.dirname(definitive_filename))
         if tv_video["path"] != definitive_filename:
             try:
-                shutil.move(tv_video["path"], definitive_filename)
+                move_file(tv_video["path"], definitive_filename)
             except FileNotFoundError:
                 pass
         tv_video["path"] = definitive_filename

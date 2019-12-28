@@ -1,6 +1,6 @@
 import unicodedata
 
-from PyQt5.QtCore import QSortFilterProxyModel, Qt
+from PyQt5.QtCore import QSortFilterProxyModel, Qt, QVariant
 from PyQt5.QtGui import QCursor
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QTableView, QHeaderView, QAbstractItemView, QLineEdit, \
     QComboBox, QCheckBox
@@ -35,6 +35,11 @@ class Videos(QWidget):
 
         self.model_server = self.window().get_model("server")
         self.model_server.servers.connected.connect(self.on_server_connection)
+
+        all_servers = list(self.model_server.servers.all())
+        if len(all_servers) > 0:
+            self.proxy.set_server(all_servers[0].name)
+
 
         self.combo_server = QComboBox(self)
         self.combo_server.setModel(self.model_server)
@@ -140,6 +145,8 @@ class SortVideo(QSortFilterProxyModel):
     def filterAcceptsRow(self, source_row, source_parent):
         index = self.sourceModel().index(source_row, 0, source_parent)
         data = self.sourceModel().data(index)
+        if data == QVariant():
+            return False
 
         if not data["server"] == self.server_name:
             return False

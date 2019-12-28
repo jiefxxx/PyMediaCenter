@@ -1,6 +1,6 @@
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QVBoxLayout, QLabel, QHBoxLayout, QLineEdit, QTableView, \
-    QHeaderView, QAbstractItemView
+    QHeaderView, QAbstractItemView, QPushButton
 
 from mediaCenter_lib.gui.widget import WidgetSpinner
 from mediaCenter_lib.model.tmdb import TmdbModel, TmdbTvModel
@@ -88,11 +88,12 @@ class TvMakerDialog(QDialog):
     def __init__(self, videos, tv_show, *args, **kwargs):
         QDialog.__init__(self, *args, **kwargs)
         self.setWindowTitle("Tv Maker")
-        self.setMinimumSize(900, 400)
+        self.setMinimumSize(900, 500)
 
         end_button = QDialogButtonBox.Ok | QDialogButtonBox.Cancel
 
         self.layout = QVBoxLayout()
+        hbox = QHBoxLayout()
 
         self.model = TvMakerModel(videos, tv_show)
         self.table = QTableView(self)
@@ -105,9 +106,22 @@ class TvMakerDialog(QDialog):
         self.buttonBox.accepted.connect(self.accept)
         self.buttonBox.rejected.connect(self.reject)
 
-        self.layout.addWidget(self.table)
+        self.input_season = QLineEdit(self)
+        self.button_season = QPushButton("set season", self)
+        self.button_season.clicked.connect(self.on_season)
+
+        hbox.addWidget(self.input_season)
+        hbox.addWidget(self.button_season)
+        hbox.addStretch(True)
+
+        self.layout.addLayout(hbox)
+        self.layout.addWidget(self.table, stretch=True)
         self.layout.addWidget(self.buttonBox)
         self.setLayout(self.layout)
+
+    def on_season(self):
+        season = int(self.input_season.text())
+        self.model.set_season(season)
 
 
 class TmdbTvDialog(QDialog):
