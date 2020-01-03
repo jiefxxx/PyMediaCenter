@@ -102,10 +102,10 @@ genre_table = {
 tv_show_table = {
     "name": "tv_shows",
     "attrs": {"id":                "INTEGER NOT NULL UNIQUE",
-              "name":              "TEXT",
+              "title":             "TEXT",
               "original_language": "TEXT",
-              "original_name":     "TEXT",
-              "first_air_date":    "TEXT",
+              "original_title":    "TEXT",
+              "release_date":      "TEXT",
               "overview":          "TEXT",
               "vote_average":      "INTEGER",
               "poster_path":       "TEXT",

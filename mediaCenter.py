@@ -6,15 +6,13 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QStackedWidget, QTabWidge
 
 from mediaCenter_lib.gui.dialogs import ConfirmationDialog
 from mediaCenter_lib.gui.mediaplayer import MediaPlayer
-from mediaCenter_lib.gui.movies import Movies
-from mediaCenter_lib.gui.tvs import Tvs
-from mediaCenter_lib.gui.upload_box import UploadBox
-from mediaCenter_lib.gui.server_manager import ServerManager
-from mediaCenter_lib.gui.videos import Videos
+from mediaCenter_lib.gui.medialibrary import MediaLibrary
+from mediaCenter_lib.gui.filesharing import FileSharing
+from mediaCenter_lib.gui.servermanager import ServerManager
+from mediaCenter_lib.gui.videolibrary import VideoLibrary
 
-from mediaCenter_lib.model.genre import GenreModel
-from mediaCenter_lib.model.movie import MovieModel
-from mediaCenter_lib.model.tv import TvShowModel, TvEpisodeModel
+from mediaCenter_lib.model.media import MediaModel
+from mediaCenter_lib.model.tv import TvEpisodeModel
 from mediaCenter_lib.model.upload import UploadVideoModel
 from mediaCenter_lib.model.server import ServerModel
 from mediaCenter_lib.model.video import VideoModel
@@ -33,7 +31,6 @@ create_new_mode(ProcessMode, "poster", size=2)
 create_new_mode(AsyncioMode, "asyncio")
 
 list_servers = ServersManager("client_"+pyconfig.get("hostname"), ["6c:f0:49:56:03:c8"])
-#list_servers.new("local", "192.168.1.40")
 
 
 class MainWindow(QMainWindow):
@@ -42,10 +39,9 @@ class MainWindow(QMainWindow):
         super(MainWindow, self).__init__(*args, **kwargs)
         self.models = []
         self.add_model("video", VideoModel(list_servers))
-        self.add_model("movie", MovieModel(list_servers, connect=self.get_model("video")))
+        self.add_model("movie", MediaModel(list_servers))
         self.add_model("upload", UploadVideoModel(list_servers))
         self.add_model("server", ServerModel(list_servers))
-        self.add_model("tv_show", TvShowModel(list_servers))
         self.add_model("tv_episode", TvEpisodeModel(list_servers))
         list_servers.connection_error.connect(self.on_connection_error)
         list_servers.connected.connect(self.on_connection)
@@ -54,17 +50,15 @@ class MainWindow(QMainWindow):
 
         self.setWindowTitle("PMC - PyMediaCenter")
 
-        self.movies = Movies(self, callback=self.test)
-        self.upload = UploadBox(self)
+        self.movies = MediaLibrary(self)
+        self.upload = FileSharing(self)
         self.media_player = MediaPlayer(self)
         self.server_manager = ServerManager(self)
-        self.videos = Videos(self)
-        self.tvs = Tvs(self)
+        self.videos = VideoLibrary(self)
 
         self.tab = QTabWidget(self)
 
-        self.tab.addTab(self.movies, "Films")
-        self.tab.addTab(self.tvs, "Series")
+        self.tab.addTab(self.movies, "Media")
         self.tab.addTab(self.videos, "Videos")
         self.tab.addTab(self.upload, "Videos transfer")
         self.tab.addTab(self.server_manager, "config")
@@ -115,7 +109,7 @@ class MainWindow(QMainWindow):
             
         uri = list_servers.server(video["server"]).get_stream(video["video_id"])
         print(uri)
-        self.media_player.load(uri)
+        self.media_player.play_video(video)
         self.stack.setCurrentWidget(self.media_player)
         print(video)
 

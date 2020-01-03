@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QVBoxLayout, QLabel, QHBo
     QHeaderView, QAbstractItemView, QPushButton
 
 from mediaCenter_lib.gui.widget import WidgetSpinner
-from mediaCenter_lib.model.tmdb import TmdbModel, TmdbTvModel
+from mediaCenter_lib.model.tmdb import TmdbMovieModel, TmdbTvModel
 from mediaCenter_lib.model.tv import TvMakerModel
 
 
@@ -27,7 +27,7 @@ class TmdbDialog(QDialog):
         self.hbox.addWidget(self.spinner)
 
         self.table = QTableView(self)
-        self.model = TmdbModel()
+        self.model = TmdbMovieModel()
         self.model.busy.connect(self.on_model_busy)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.table.horizontalHeader().setMaximumSectionSize(700)

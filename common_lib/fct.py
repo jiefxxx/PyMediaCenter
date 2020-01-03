@@ -3,6 +3,7 @@ import math
 import os
 import shutil
 import time
+import unicodedata
 import uuid
 
 from common_lib.config import MEDIA_TYPE_UNKNOWN, MEDIA_TYPE_MOVIE, MEDIA_TYPE_TV
@@ -67,3 +68,21 @@ def move_file(src, dst):
             os.unlink(src)
         else:
             raise
+
+
+def strip_accents(text):
+    text = unicodedata.normalize('NFD', text)
+    text = text.encode('ascii', 'ignore')
+    text = text.decode("utf-8")
+    return str(text)
+
+
+def filter_by_string(data, key, value):
+    if len(value) == 0:
+        return True
+    data_value = strip_accents(data[key]).lower()
+    value = strip_accents(value).lower()
+    for val in value.split(" "):
+        if data_value.find(val) < 0 < len(val):
+            return False
+    return True

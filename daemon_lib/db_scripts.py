@@ -5,7 +5,7 @@ import magic
 import pyconfig
 from common_lib.config import MEDIA_TYPE_UNKNOWN, MEDIA_TYPE_MOVIE, MEDIA_TYPE_TV
 from common_lib.fct import ensure_dir, move_file
-from common_lib.videos_info import SearchMovie, get_video_info, get_videos, get_genres, parse_movie_name, \
+from common_lib.videos_info import SearchTmdb, get_video_info, get_videos, get_genres, parse_movie_name, \
     get_episode_info, parse_episode_name, get_movie_info, get_normalized_file_name, get_tv_info, \
     get_normalized_episode_name
 from daemon_lib.handlers.videos import get_directory
@@ -108,7 +108,7 @@ class FilesUpdate:
     refresh_type = "videos"
 
     def fct(self, task, db):
-        update_videos_worker(task, "videos.downloads.path", MEDIA_TYPE_UNKNOWN, db)
+        # update_videos_worker(task, "videos.downloads.path", MEDIA_TYPE_UNKNOWN, db)
         update_videos_worker(task, "videos.movies.path", MEDIA_TYPE_MOVIE, db)
         update_videos_worker(task, "videos.tvs.path", MEDIA_TYPE_TV, db)
 
@@ -116,12 +116,44 @@ class FilesUpdate:
         return "update file table"
 
 
+class RefreshUnknowns:
+    name = "refresh_unknowns"
+    refresh_type = "videos"
+
+    def fct(self, task, db):
+        mime = magic.Magic(mime=True)
+        if not task.is_alive():
+            return
+        for video in db.get("videos", where={"media_type": MEDIA_TYPE_UNKNOWN}):
+            if not os.path.exists(video["path"]):
+                db.delete_row("videos", where={"video_id": video["video_id"]})
+        for root_path in pyconfig.get("videos.downloads.path"):
+            videos = list(get_videos(root_path))
+            size = len(videos)
+            i = 0
+            for path in videos:
+                if not task.is_alive():
+                    return
+                i += 1
+                task.do_progress(i / size, path)
+                if path[-5:] == ".part":
+                    pass
+                elif mime.from_file(path).split("/")[0] != "video":
+                    pass
+                elif len(list(db.get("videos", where={"path": path}))) == 0:
+                    video = get_video_info(path, MEDIA_TYPE_UNKNOWN)
+                    db.set("videos", video)
+
+    def description(self, db):
+        return "refresh unknowns"
+
+
 class TvsUpdate:
     name = "update_tvs"
     refresh_type = "tvs"
 
     def fct(self, task, db):
-        search = SearchMovie(pyconfig.get("tmdb.api_key"))
+        search = SearchTmdb(pyconfig.get("tmdb.api_key"))
         videos = list(db.get("videos", where={"media_id": None, "media_type": MEDIA_TYPE_TV}))
         size = len(videos)
         i = 0
@@ -156,7 +188,7 @@ class MoviesUpdate:
     refresh_type = "movies"
 
     def fct(self, task, db):
-        search = SearchMovie(pyconfig.get("tmdb.api_key"))
+        search = SearchTmdb(pyconfig.get("tmdb.api_key"))
         videos = list(db.get("videos", where={"media_id": None, "media_type": MEDIA_TYPE_MOVIE}))
         size = len(videos)
         i = 0

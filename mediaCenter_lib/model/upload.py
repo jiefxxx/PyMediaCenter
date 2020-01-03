@@ -8,7 +8,7 @@ from requests_toolbelt import MultipartEncoderMonitor
 
 from common_lib.config import MEDIA_TYPE_MOVIE
 from common_lib.fct import convert_size
-from mediaCenter_lib.base_model import ModelTableListDict
+from mediaCenter_lib.model import ModelTableListDict
 from pythread import threaded, create_new_mode
 from pythread.modes import RunForeverMode
 

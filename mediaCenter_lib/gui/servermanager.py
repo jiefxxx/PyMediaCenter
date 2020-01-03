@@ -20,6 +20,8 @@ class ActionBar(QWidget):
         self.button_reset_movies.clicked.connect(self.parent().on_movies_reset)
         self.button_reset_tvs = QPushButton("Reset database series", self)
         self.button_reset_tvs.clicked.connect(self.parent().on_tvs_reset)
+        self.button_refresh_unknowns = QPushButton("Reset database series", self)
+        self.button_refresh_unknowns.clicked.connect(self.parent().on_unknowns_refresh)
         self.hbox.addWidget(self.button_update_files)
         self.hbox.addWidget(self.button_update_movies)
         self.hbox.addWidget(self.button_update_tvs)
@@ -27,6 +29,7 @@ class ActionBar(QWidget):
         self.hbox.addWidget(self.button_reset)
         self.hbox.addWidget(self.button_reset_movies)
         self.hbox.addWidget(self.button_reset_tvs)
+        self.hbox.addWidget(self.button_refresh_unknowns)
         self.hbox.addStretch()
         self.setLayout(self.hbox)
 
@@ -120,3 +123,7 @@ class ServerBox(QWidget):
     def on_tvs_reset(self):
         if self.server_name:
             self.model.start_script("reset_tvs", self.server_name)
+
+    def on_unknowns_refresh(self):
+        if self.server_name:
+            self.model.start_script("refresh_unknowns", self.server_name)

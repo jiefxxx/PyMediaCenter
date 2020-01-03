@@ -1,14 +1,14 @@
 import pyconfig
-from common_lib.videos_info import SearchMovie
-from mediaCenter_lib.base_model import ModelTableListDict
+from common_lib.videos_info import SearchTmdb
+from mediaCenter_lib.model import ModelTableListDict
 from pythread import threaded
 
 
-class TmdbModel(ModelTableListDict):
+class TmdbMovieModel(ModelTableListDict):
     def __init__(self):
         ModelTableListDict.__init__(self, [("Title", "title", False, None),
                                            ("Release date", "release_date", False, None)])
-        self.search = SearchMovie(pyconfig.get("tmdb.api_key"))
+        self.search = SearchTmdb(pyconfig.get("tmdb.api_key"))
 
     @threaded("httpCom")
     def on_search(self, text, year=None):
@@ -24,7 +24,7 @@ class TmdbTvModel(ModelTableListDict):
         ModelTableListDict.__init__(self, [("Title", "name", False, None),
                                            ("Release date", "first_air_date", False, None),
                                            ("Overview", "overview", False, None)])
-        self.search = SearchMovie(pyconfig.get("tmdb.api_key"))
+        self.search = SearchTmdb(pyconfig.get("tmdb.api_key"))
 
     @threaded("httpCom")
     def on_search(self, text, year=None):

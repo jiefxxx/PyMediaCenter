@@ -42,7 +42,7 @@ class VideoHandler(HTTPHandler):
             return self.response.send_text(200, "ok ")
 
         if action == "last_time":
-            last_time = int(self.header.url.get("media_type", default=None))
+            last_time = int(self.header.url.get("time", default=None))
             if last_time is None:
                 return self.response.send_error(400)
 

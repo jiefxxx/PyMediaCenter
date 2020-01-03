@@ -6,7 +6,7 @@ from mediaCenter_lib.gui.dialogs import TmdbDialog, TvMakerDialog, TmdbTvDialog
 from mediaCenter_lib.gui.widget import QIconButton
 
 
-class UploadBox(QWidget):
+class FileSharing(QWidget):
     def __init__(self, parent):
         QWidget.__init__(self, parent)
         self.hbox = QHBoxLayout()

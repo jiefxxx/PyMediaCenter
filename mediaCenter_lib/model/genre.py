@@ -1,7 +1,7 @@
 import requests
 from PyQt5.QtCore import pyqtSignal
 
-from mediaCenter_lib.base_model import ModelTableListDict, ServerStateHandler
+from mediaCenter_lib.model import ServerStateHandler, ModelTableListDict
 from pythread import threaded
 
 
@@ -21,8 +21,10 @@ class GenreModel(ModelTableListDict):
         if not self.check_in(genre):
             self.list.append({"name": genre})
         self.reset_data(self.list)
+        self.refreshed.emit()
 
     def reset(self):
         self.list = []
         self.list.append({"name": "Tous"})
         self.reset_data(self.list)
+        self.refreshed.emit()

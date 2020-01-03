@@ -1,11 +1,13 @@
 import sys
 import time
 
+from common_lib.fct import convert_duration
+from mediaCenter_lib.gui.dialogs import ConfirmationDialog
 from mediaCenter_lib.gui.widget import QIconButton, QJumpSlider
 
 from PyQt5.QtCore import Qt, QTimer, QSize, QRect, QPoint
 from PyQt5.QtGui import QPalette, QColor, QPainter
-from PyQt5.QtWidgets import QWidget, QFrame, QHBoxLayout, QLayout, QMenu, QStyle, QStyleOption
+from PyQt5.QtWidgets import QWidget, QFrame, QHBoxLayout, QLayout, QMenu, QStyle, QStyleOption, QLabel
 
 import vlc
 
@@ -13,8 +15,11 @@ import vlc
 class MediaPlayer(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.videos = []
+        self.current_video = None
         self.last_move = time.time()
         self.setMouseTracking(True)
+        self.video_model = self.window().get_model("video")
 
         self.layout = PlayerLayout(self)
         self.setLayout(self.layout)
@@ -48,8 +53,40 @@ class MediaPlayer(QWidget):
 
         self.old_window_state = None
 
+    def set_videos(self, videos):
+        self.videos = videos
+        video = self.videos[0]
+        self.play_video(video)
+
+    def play_video(self, video):
+        video = self.video_model.get_video(video)
+        if video is None:
+            return False
+        self.load(self.video_model.get_uri(video))
+        self.current_video = video
+        last_time = video.get("last_time", None)
+        if last_time:
+            conf = ConfirmationDialog("Reprendre la lecture à :\r\n " + convert_duration(last_time), self)
+            if conf.exec_():
+                self.media_player.set_time(last_time)
+                return True
+        self.current_video["last_time"] = 0
+        return True
+
+    def update_last_time(self):
+        if not self.current_video:
+            return
+        current = int(self.media_player.get_time())
+        if self.current_video["last_time"]+120 < current:
+            self.current_video["last_time"] = current
+            self.video_model.update_last_time(self.current_video)
+
     def update_ui(self):
+        total = int(self.media_player.get_length())
+        current = int(self.media_player.get_time())
         self.controllers.set_position(self.media_player.get_position())
+        self.controllers.set_timing(current, total)
+        self.update_last_time()
         if self.last_move+3 < time.time() and self.controllers.isVisible():
             self.controllers.setVisible(False)
             if not self.controllers.isVisible():
@@ -66,6 +103,7 @@ class MediaPlayer(QWidget):
 
     def play(self):
         if self.media_player.is_playing():
+            self.update_last_time()
             self.media_player.pause()
             self.is_playing = False
         else:
@@ -73,6 +111,7 @@ class MediaPlayer(QWidget):
             self.is_playing = True
 
     def stop(self):
+        self.update_last_time()
         self.media_player.stop()
         self.is_playing = False
         self.window().full_screen(False)
@@ -97,11 +136,33 @@ class MediaPlayer(QWidget):
     def set_subtitles_track(self, track):
         self.media_player.video_set_spu(track)
 
+    def set_audio_device(self, device):
+        self.media_player.pause()
+        self.media_player.audio_output_device_set(None, device)
+        time.sleep(0.05)
+        self.media_player.pause()
+
     def menu_audio_subtitles(self):
+        devices = []
+        mods = self.media_player.audio_output_device_enum()
+
+        if mods:
+            mod = mods
+            while mod:
+                mod = mod.contents
+                devices.append(mod.device)
+                mod = mod.next
+
+        vlc.libvlc_audio_output_device_list_release(mods)
         audio = self.media_player.audio_get_track_description()
         subtitles = self.media_player.video_get_spu_description()
 
         menu = QMenu(self.controllers.button_str)
+
+        menu.addSection("Audio Output")
+        for el in devices:
+            action = menu.addAction(el.decode().split('.')[-1])
+            action.triggered.connect(lambda checked, device=el: self.set_audio_device(device))
 
         menu.addSection("Pistes Audio")
         for el in audio:
@@ -166,12 +227,18 @@ class Controllers(QWidget):
         self.button_stop.clicked.connect(parent.stop)
         self.hbox.addWidget(self.button_stop)
 
+        self.label_position_time = QLabel("--:--:--", self)
+        self.hbox.addWidget(self.label_position_time)
+
         self.slider = QJumpSlider(Qt.Horizontal, self)
         self.slider.setMaximum(1000)
         self.slider.sliderMoved.connect(parent.move_position)
         self.slider.valueChanged.connect(parent.set_position)
         self.slider.setFocusPolicy(Qt.NoFocus)
         self.hbox.addWidget(self.slider)
+
+        self.label_remaining_time = QLabel("--:--:--", self)
+        self.hbox.addWidget(self.label_remaining_time)
 
         self.button_str = QIconButton("rsc/icones/languages.png", self)
         self.button_str.clicked.connect(parent.menu_audio_subtitles)
@@ -196,6 +263,10 @@ class Controllers(QWidget):
         self.slider.valueChanged.disconnect(self.parent().set_position)
         self.slider.setValue(position*1000)
         self.slider.valueChanged.connect(self.parent().set_position)
+
+    def set_timing(self, timing, total_time):
+        self.label_position_time.setText(convert_duration(timing))
+        self.label_remaining_time.setText(convert_duration(total_time-timing))
 
 
 class PlayerLayout(QLayout):

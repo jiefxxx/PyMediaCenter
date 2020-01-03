@@ -1,12 +1,5 @@
-import json
-
-import requests
-import websocket
-from PyQt5.QtCore import QObject, pyqtSignal
-
-from mediaCenter_lib.base_model import ServerStateHandler, ModelTableListDict
-from pythread import create_new_mode, threaded
-from pythread.modes import RunForeverMode
+from mediaCenter_lib.model import ServerStateHandler, ModelTableListDict
+from pythread import threaded
 
 
 class ServerModel(ServerStateHandler, ModelTableListDict):

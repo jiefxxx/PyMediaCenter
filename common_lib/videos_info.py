@@ -37,7 +37,7 @@ def get_genres(language=None, api_key=None):
         yield genre
 
 
-class SearchMovie:
+class SearchTmdb:
     def __init__(self, api_key):
         tmdb.API_KEY = api_key
         self.search = tmdb.Search()
@@ -50,7 +50,7 @@ class SearchMovie:
         self.search.movie(query=string, primary_release_year=year)
         if len(self.search.results) > 0:
             for s in self.search.results:
-                s = tmdb.Movies(s["id"]).info(language=language)
+                s = get_movie_info(s["id"], language=language)
                 if "release_date" in s and year is not None:
                     if int(s["release_date"][:4]) == year:
                         yield s
@@ -114,6 +114,9 @@ def get_tv_info(tv_id, language=None):
     tv_info["genre_ids"] = []
     for genre in tv_info["genres"]:
         tv_info["genre_ids"].append(genre["id"])
+    tv_info["title"] = tv_info["name"]
+    tv_info["original_title"] = tv_info["original_name"]
+    tv_info["release_date"] = tv_info["first_air_date"]
     return tv_info
 
 
@@ -182,7 +185,14 @@ def parse_episode_name(path_name):
     return tv_name, saison, episode
 
 
-reg_tv_show = [r".*[s](\d+)[e](\d+).*", r".*(\d+)[x](\d+).*", r".*(\d*)[x](\d+).*", r".*e(\d+).*", r"(\d*).*"]
+reg_tv_show = [r".*[s](\d+)[e](\d+).*",
+               r".*(\d+)[x](\d+).*",
+               r".*(\d*)[x](\d+).*",
+               r".*e(\d+).*",
+               r".*(\d{1})(\d{2}).*",
+               r".*(\d{2}).*",
+               r"(\d*).*",
+               r".*(\d*)"]
 
 
 def parse_episode_path(path_name):
@@ -190,10 +200,10 @@ def parse_episode_path(path_name):
     for reg in reg_tv_show:
         try:
             m = re.match(reg, name.lower())
-            if len(m.groups())==2:
+            if len(m.groups()) == 2:
                 return int(m.group(1)), int(m.group(2))
             else:
-                return 1, int(m.group(1))
+                return None, int(m.group(1))
         except (AttributeError, ValueError):
             pass
 

@@ -2,7 +2,7 @@ import requests
 from PyQt5.QtCore import pyqtSignal
 
 from common_lib.fct import convert_size, convert_bit_stream, add_px, convert_duration, convert_media_type
-from mediaCenter_lib.base_model import ModelTableListDict, ServerStateHandler
+from mediaCenter_lib.model import ServerStateHandler, ModelTableListDict
 from pythread import threaded
 
 
@@ -56,4 +56,15 @@ class VideoModel( ServerStateHandler, ModelTableListDict):
     @threaded("httpCom")
     def edit_tv(self, video, tv_id, season, episode):
         self.servers.server(video["server"]).edit_tv(video["video_id"], tv_id, season, episode)
+
+    def get_video(self, video):
+        return list(self.servers.server(video["server"]).get_videos(video_id=video["video_id"]))[0]
+
+    def get_uri(self, video):
+        return self.servers.server(video["server"]).get_stream(video["video_id"])
+
+    @threaded("httpCom")
+    def update_last_time(self, video):
+        return self.servers.server(video["server"]).edit_last_time(video["video_id"], video["last_time"])
+
 

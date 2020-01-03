@@ -70,7 +70,7 @@ class Tasks:
             if task.script.refresh_type not in self.notify:
                 self.notify.append(task.script.refresh_type)
 
-            if self.last_time+60 == time.time():
+            if self.last_time+60 >= time.time():
                 self.clear_notify()
 
             return True

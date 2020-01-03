@@ -9,7 +9,7 @@ from common_lib.config import MEDIA_TYPE_MOVIE, MEDIA_TYPE_TV, MEDIA_TYPE_UNKNOW
 from mediaCenter_lib.gui.menu import VideoMenu
 
 
-class Videos(QWidget):
+class VideoLibrary(QWidget):
     def __init__(self, parent):
         QWidget.__init__(self, parent)
         self.hbox = QHBoxLayout()
@@ -23,8 +23,8 @@ class Videos(QWidget):
         self.proxy.setSourceModel(self.model)
         self.table.setModel(self.proxy)
         self.table.setSortingEnabled(True)
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
-        self.table.horizontalHeader().setMaximumSectionSize(500)
+        # self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        # self.table.horizontalHeader().setMaximumSectionSize(500)
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table.setContextMenuPolicy(Qt.CustomContextMenu)
         self.table.customContextMenuRequested.connect(self.on_menu)

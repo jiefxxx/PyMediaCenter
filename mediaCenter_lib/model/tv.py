@@ -1,58 +1,11 @@
 import textwrap
 
-from PyQt5.QtCore import pyqtSignal, QVariant
-from PyQt5.QtGui import QIcon, QPixmap
+from PyQt5.QtCore import pyqtSignal, QSortFilterProxyModel, Qt
 
 from common_lib.config import MEDIA_TYPE_TV
 from common_lib.videos_info import parse_episode_path
-from mediaCenter_lib.base_model import ModelTableListDict, ServerStateHandler
-from mediaCenter_lib.poster_manager import PosterManager
+from mediaCenter_lib.model import ServerStateHandler, ModelTableListDict, PosterManager
 from pythread import threaded
-
-
-class TvShowModel(ServerStateHandler, PosterManager, ModelTableListDict):
-    info = pyqtSignal('PyQt_PyObject')
-
-    def __init__(self, servers,  **kwargs):
-        ModelTableListDict.__init__(self, [("#", None, False, None),
-                                           ("Title", "name", False, None),
-                                           ("Original Title", "original_name", False, None),
-                                           ("Tv ID", "id", False, None),
-                                           ("Genres", "genre_name", False, None),
-                                           ("Release date", "first_air_date", False, None),
-                                           ("Vote", "vote_average", False, None),
-                                           ("Poster", "poster_path", False, None)], **kwargs)
-
-        PosterManager.__init__(self)
-
-        ServerStateHandler.__init__(self, servers)
-        self.refresh()
-
-    def on_connection(self, server_name):
-        self.refresh()
-
-    def on_disconnection(self, server_name):
-        self.refresh()
-
-    def on_refresh(self, server_name, section):
-        if section == "tvs":
-            self.refresh()
-
-    @threaded("httpCom")
-    def refresh(self):
-        data = []
-        for server in self.servers.all():
-            data += list(server.get_tv_shows(columns=list(self.get_keys())))
-        self.reset_data(data)
-        self.end_refreshed()
-
-    def get_decoration_role(self, index):
-        if index.column() == 0:
-            if self.poster_exists(self.list[index.row()]["poster_path"]):
-                return QIcon(QPixmap(self.get_poster_path(self.list[index.row()]["poster_path"], mini=True)))
-            else:
-                return QIcon(QPixmap("rsc/404.jpg"))
-        return QVariant()
 
 
 class TvEpisodeModel(ServerStateHandler, PosterManager, ModelTableListDict):
@@ -119,3 +72,34 @@ class TvMakerModel(ModelTableListDict):
             el["season_number"] = int(season)
         self.reset_data(self.list)
 
+
+class SortEpisode(QSortFilterProxyModel):
+    def __init__(self):
+        QSortFilterProxyModel.__init__(self, None)
+        self.tv_id = 0
+        self.reverse = False
+
+    def lessThan(self, left, right):
+        left_data = self.sourceModel().data(left)
+        right_data = self.sourceModel().data(right)
+        if left_data["season_number"] < right_data["season_number"]:
+            return True
+        elif left_data["season_number"] == right_data["season_number"]:
+            return left_data["episode_number"] < right_data["episode_number"]
+        else:
+            return False
+
+    def filterAcceptsRow(self, source_row, source_parent):
+        index = self.sourceModel().index(source_row, 0, source_parent)
+        data = self.sourceModel().data(index)
+        if data["tv_id"] != self.tv_id:
+            return False
+
+        return True
+
+    def do_sort(self):
+        if self.reverse:
+            self.sort(0, order=Qt.DescendingOrder)
+        else:
+            self.sort(0, order=Qt.AscendingOrder)
+        self.invalidate()

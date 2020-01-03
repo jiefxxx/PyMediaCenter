@@ -143,6 +143,10 @@ class Server(QObject):
                  "/edit?media_type=" + str(MEDIA_TYPE_MOVIE) +
                  "&movie_id=" + str(movie_id))
 
+    def edit_last_time(self, video_id, last_time):
+        self.get("/video/" + str(video_id) +
+                 "/last_time?time=" + str(last_time))
+
     def edit_tv(self, video_id, tv_id, season, episode):
         print(video_id, tv_id, season, episode)
         self.get("/video/" + str(video_id) +
