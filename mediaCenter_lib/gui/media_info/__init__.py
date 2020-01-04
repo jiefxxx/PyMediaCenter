@@ -11,6 +11,11 @@ class MediaInfo(QWidget):
         QWidget.__init__(self, parent)
         self.setFixedWidth(500)
 
+        self.setStyleSheet("QLabel{font-size: 15px;}"
+                           "QTabWidget{font-size: 15px;}"
+                           "QTableView{font-size: 15px;}"
+                           "QToolTip{font-size: 15px}")
+
         self.stack = QStackedWidget(self)
 
         self.model = parent.model
@@ -23,10 +28,12 @@ class MediaInfo(QWidget):
         self.title = QLabel()
         self.title.setText("Title")
         self.title.setWordWrap(True)
+        self.title.setStyleSheet("QLabel{font-size: 25px;}")
 
         self.original_title = QLabel()
         self.original_title.setText("Original Title")
         self.original_title.setWordWrap(True)
+        self.original_title.setStyleSheet("QLabel{font-style: italic;}")
 
         self.release = QLabel()
         self.release.setText("Release Date")
@@ -51,6 +58,7 @@ class MediaInfo(QWidget):
         self.movie_vbox.addWidget(self.release)
         self.movie_vbox.addWidget(self.vote)
         self.movie_vbox.addWidget(self.genres_label)
+        self.movie_vbox.addStretch(True)
 
         hbox = QHBoxLayout()
         hbox.addWidget(self.poster)
@@ -79,3 +87,4 @@ class MediaInfo(QWidget):
         elif media["media_type"] == MEDIA_TYPE_TV:
             self.tv_info.set_media(media)
             self.stack.setCurrentWidget(self.tv_info)
+

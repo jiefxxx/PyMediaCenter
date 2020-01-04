@@ -7,7 +7,8 @@ from pythread import threaded
 class TmdbMovieModel(ModelTableListDict):
     def __init__(self):
         ModelTableListDict.__init__(self, [("Title", "title", False, None),
-                                           ("Release date", "release_date", False, None)])
+                                           ("Release date", "release_date", False, None),
+                                           ("Overview", "overview", False, None)])
         self.search = SearchTmdb(pyconfig.get("tmdb.api_key"))
 
     @threaded("httpCom")

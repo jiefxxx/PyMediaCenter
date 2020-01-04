@@ -12,8 +12,9 @@ from mediaCenter_lib.gui.servermanager import ServerManager
 from mediaCenter_lib.gui.videolibrary import VideoLibrary
 
 from mediaCenter_lib.model.media import MediaModel
+from mediaCenter_lib.model.movie import MovieModel
 from mediaCenter_lib.model.tv import TvEpisodeModel
-from mediaCenter_lib.model.upload import UploadVideoModel
+from mediaCenter_lib.model.filesharing import FileSharingModel
 from mediaCenter_lib.model.server import ServerModel
 from mediaCenter_lib.model.video import VideoModel
 from mediaCenter_lib.server import ServersManager
@@ -39,10 +40,11 @@ class MainWindow(QMainWindow):
         super(MainWindow, self).__init__(*args, **kwargs)
         self.models = []
         self.add_model("video", VideoModel(list_servers))
-        self.add_model("movie", MediaModel(list_servers))
-        self.add_model("upload", UploadVideoModel(list_servers))
+        self.add_model("media", MediaModel(list_servers))
+        self.add_model("upload", FileSharingModel(list_servers))
         self.add_model("server", ServerModel(list_servers))
         self.add_model("tv_episode", TvEpisodeModel(list_servers))
+        self.add_model("movie_file", MovieModel(list_servers))
         list_servers.connection_error.connect(self.on_connection_error)
         list_servers.connected.connect(self.on_connection)
 

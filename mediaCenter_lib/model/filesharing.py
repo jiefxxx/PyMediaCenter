@@ -13,7 +13,7 @@ from pythread import threaded, create_new_mode
 from pythread.modes import RunForeverMode
 
 
-class UploadVideoModel(ModelTableListDict):
+class FileSharingModel(ModelTableListDict):
     def __init__(self, servers, **kwargs):
         ModelTableListDict.__init__(self, [("Type", "type", False, None),
                                            ("Path", "path", False, None),

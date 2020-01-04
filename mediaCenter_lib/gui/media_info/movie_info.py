@@ -1,65 +1,49 @@
-from PyQt5.QtWidgets import QWidget, QLabel, QHBoxLayout, QVBoxLayout
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QCursor
+from PyQt5.QtWidgets import QWidget, QLabel, QHBoxLayout, QVBoxLayout, QTableView, QHeaderView, QAbstractItemView, \
+    QTabWidget
 
 from common_lib.fct import convert_duration, convert_size
+from mediaCenter_lib.gui.menu import VideoMenu
 
 
 class MovieInfo(QWidget):
     def __init__(self, parent):
         QWidget.__init__(self, parent)
+        self.vbox = QVBoxLayout()
+        self.setLayout(self.vbox)
+
+        self.model = self.window().get_model("movie_file")
+
+        self.table = QTableView(self)
+
+        self.table.setModel(self.model)
+        self.table.setSortingEnabled(True)
+        self.table.verticalHeader().setVisible(False)
+        self.table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.table.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.table.customContextMenuRequested.connect(self.on_menu)
+        self.table.hideColumn(2)
+
+        self.tab = QTabWidget(self)
 
         self.overview = QLabel()
         self.overview.setText("overview")
         self.overview.setWordWrap(True)
 
-        self.video_id = QLabel()
-        self.video_id.setText("video ID: None")
+        self.tab.addTab(self.table, "Videos")
+        self.tab.addTab(self.overview, "Overview")
 
-        self.duration = QLabel()
-        self.duration.setText("Os")
+        self.vbox.addWidget(self.tab, stretch=True)
 
-        self.size = QLabel()
-        self.size.setText("0 b")
+    def on_menu(self, pos):
+        proxy_index = self.table.indexAt(pos)
+        model_index = proxy_index
+        data = self.model.data(model_index)
+        VideoMenu(self.window(), data).popup(QCursor.pos())
 
-        self.video_codec = QLabel()
-        self.video_codec.setText("Codec: None")
-
-        self.bit_rate = QLabel()
-        self.bit_rate.setText(" 0 b/s")
-
-        self.definition = QLabel()
-        self.definition.setText("résolution 0px / 0px")
-
-        self.junk = QLabel()
-        self.junk.setText("Junk: None")
-
-        duration_hbox = QHBoxLayout()
-        duration_hbox.addWidget(self.duration)
-        duration_hbox.addWidget(self.size)
-
-        codec_hbox = QHBoxLayout()
-        codec_hbox.addWidget(self.video_codec)
-        codec_hbox.addWidget(self.bit_rate)
-
-        self.vbox = QVBoxLayout()
-        self.vbox.addWidget(self.overview)
-        self.vbox.addWidget(self.video_id)
-        self.vbox.addLayout(duration_hbox)
-        self.vbox.addLayout(codec_hbox)
-        self.vbox.addWidget(self.definition)
-        self.vbox.addWidget(self.junk)
-        self.vbox.addStretch()
-
-        self.setLayout(self.vbox)
-
-    def set_media(self, movie_info):
-        self.overview.setText(movie_info["overview"])
-
-        self.video_id.setText("video ID: "+str(movie_info["server"])+":"+str(movie_info["video_id"]))
-        self.duration.setText(convert_duration(movie_info["duration"]))
-        self.size.setText(convert_size(movie_info["size"]))
-        self.video_codec.setText("Codec: "+str(movie_info["codecs_video"]))
-        self.bit_rate.setText(convert_size(movie_info["bit_rate"])+"/s")
-
-        self.definition.setText("résolution: "+str(movie_info["width"])+"px / "+str(movie_info["height"])+"px")
-
-        self.junk.setText("Junk : "+str(movie_info["junk"]))
+    def set_media(self, media):
+        self.model.set_media_id(media["id"])
+        self.overview.setText(media["overview"])

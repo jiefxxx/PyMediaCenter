@@ -3,6 +3,7 @@ import textwrap
 from PyQt5.QtCore import pyqtSignal, QSortFilterProxyModel, Qt
 
 from common_lib.config import MEDIA_TYPE_TV
+from common_lib.fct import convert_x
 from common_lib.videos_info import parse_episode_path
 from mediaCenter_lib.model import ServerStateHandler, ModelTableListDict, PosterManager
 from pythread import threaded
@@ -12,7 +13,7 @@ class TvEpisodeModel(ServerStateHandler, PosterManager, ModelTableListDict):
     info = pyqtSignal('PyQt_PyObject')
 
     def __init__(self, servers,  **kwargs):
-        ModelTableListDict.__init__(self, [("#", "tv_id", False, None),
+        ModelTableListDict.__init__(self, [("", "last_time", False, convert_x),
                                            ("#", "video_id", False, None),
                                            ("S", "season_number", False, None),
                                            ("E", "episode_number", False, None),
@@ -22,6 +23,8 @@ class TvEpisodeModel(ServerStateHandler, PosterManager, ModelTableListDict):
         PosterManager.__init__(self)
 
         ServerStateHandler.__init__(self, servers)
+
+        self.tv_id = -1
 
         self.refresh()
 
@@ -39,9 +42,18 @@ class TvEpisodeModel(ServerStateHandler, PosterManager, ModelTableListDict):
     def refresh(self):
         data = []
         for server in self.servers.all():
-            data += list(server.get_tv_episodes(columns=list(self.get_keys())))
+            data += list(server.get_tv_episodes(columns=list(self.get_keys()), tv_id=self.tv_id))
         self.reset_data(data)
         self.end_refreshed()
+
+    def get_proxy(self):
+        proxy = SortEpisode()
+        proxy.setSourceModel(self)
+        return proxy
+
+    def set_tv_id(self, tv_id):
+        self.tv_id = tv_id
+        self.refresh()
 
     def get_toolTip_role(self, index):
         return textwrap.fill(self.list[index.row()]["episode_overview"], width=70)
@@ -88,14 +100,6 @@ class SortEpisode(QSortFilterProxyModel):
             return left_data["episode_number"] < right_data["episode_number"]
         else:
             return False
-
-    def filterAcceptsRow(self, source_row, source_parent):
-        index = self.sourceModel().index(source_row, 0, source_parent)
-        data = self.sourceModel().data(index)
-        if data["tv_id"] != self.tv_id:
-            return False
-
-        return True
 
     def do_sort(self):
         if self.reverse:

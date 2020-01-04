@@ -130,6 +130,7 @@ class ModelTableListDict(QAbstractTableModel):
             if self.get_key(index.column(), role=EDIT_KEY):
                 return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+        return Qt.ItemIsEnabled
 
     def insertRows(self, row, count, parent=None):
         self.beginInsertRows(QModelIndex(), row, row + count - 1)

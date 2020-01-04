@@ -38,7 +38,7 @@ class VideoLibrary(QWidget):
 
         all_servers = list(self.model_server.servers.all())
         if len(all_servers) > 0:
-            self.proxy.set_server(all_servers[0].name)
+            self.model.set_server(all_servers[0].name)
 
 
         self.combo_server = QComboBox(self)
@@ -72,14 +72,14 @@ class VideoLibrary(QWidget):
         self.proxy.set_unknown_media(reverse)
 
     def on_server_connection(self, server_name):
-        if self.proxy.server_name == "":
-            self.proxy.set_server(server_name)
+        if self.model.server_name == "":
+            self.model.set_server(server_name)
 
     def on_combo_type(self, index):
-        self.proxy.set_type(self.combo_type.itemData(index, role=Qt.UserRole))
+        self.model.set_type(self.combo_type.itemData(index, role=Qt.UserRole))
 
     def on_combo_server(self, index):
-        self.proxy.set_server(self.combo_server.currentText())
+        self.model.set_server(self.combo_server.currentText())
 
     def on_input(self, text):
         self.proxy.set_search_string(text)
@@ -115,9 +115,7 @@ class SortVideo(QSortFilterProxyModel):
     def __init__(self):
         QSortFilterProxyModel.__init__(self, None)
         self.filter_string = ""
-        self.server_name = ""
         self.only_unknown = False
-        self.type = MEDIA_TYPE_UNKNOWN
 
     def set_unknown_media(self, b):
         self.only_unknown = b
@@ -125,14 +123,6 @@ class SortVideo(QSortFilterProxyModel):
 
     def set_search_string(self, string):
         self.filter_string = string
-        self.setFilterWildcard("")
-
-    def set_server(self, server_name):
-        self.server_name = server_name
-        self.setFilterWildcard("")
-
-    def set_type(self, t):
-        self.type = t
         self.setFilterWildcard("")
 
     def lessThan(self, left, right):
@@ -146,12 +136,6 @@ class SortVideo(QSortFilterProxyModel):
         index = self.sourceModel().index(source_row, 0, source_parent)
         data = self.sourceModel().data(index)
         if data == QVariant():
-            return False
-
-        if not data["server"] == self.server_name:
-            return False
-
-        if not data["media_type"] == self.type:
             return False
 
         if self.only_unknown and data["media_id"] is not None:

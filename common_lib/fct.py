@@ -42,6 +42,12 @@ def convert_bit_stream(bit_stream):
     return convert_size(bit_stream)+"/s"
 
 
+def convert_x(data):
+    if data and data > 0:
+        return "x"
+    return ""
+
+
 def convert_duration(millis):
     seconds = int(millis/1000)
     return time.strftime('%H:%M:%S', time.gmtime(seconds))

@@ -1,6 +1,6 @@
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QCursor
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTableView, QHeaderView, QAbstractItemView
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTableView, QHeaderView, QAbstractItemView, QTabWidget, QLabel
 
 from mediaCenter_lib.gui.menu import VideoMenu
 from mediaCenter_lib.model.tv import SortEpisode
@@ -14,8 +14,7 @@ class TvInfo(QWidget):
 
         self.model = self.window().get_model("tv_episode")
 
-        self.proxy = SortEpisode()
-        self.proxy.setSourceModel(self.model)
+        self.proxy = self.model.get_proxy()
 
         self.table = QTableView(self)
 
@@ -27,10 +26,19 @@ class TvInfo(QWidget):
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table.setContextMenuPolicy(Qt.CustomContextMenu)
         self.table.customContextMenuRequested.connect(self.on_menu)
-        self.table.hideColumn(0)
         self.table.hideColumn(1)
         self.table.hideColumn(5)
-        self.vbox.addWidget(self.table, stretch=True)
+
+        self.tab = QTabWidget(self)
+
+        self.overview = QLabel()
+        self.overview.setText("overview")
+        self.overview.setWordWrap(True)
+
+        self.tab.addTab(self.table, "Episodes")
+        self.tab.addTab(self.overview, "Overview")
+
+        self.vbox.addWidget(self.tab, stretch=True)
 
     def on_menu(self, pos):
         proxy_index = self.table.indexAt(pos)
@@ -39,5 +47,6 @@ class TvInfo(QWidget):
         VideoMenu(self.window(), data).popup(QCursor.pos())
 
     def set_media(self, media):
-        self.proxy.tv_id = media["id"]
+        self.model.set_tv_id(media["id"])
+        self.overview.setText(media["overview"])
         self.proxy.do_sort()

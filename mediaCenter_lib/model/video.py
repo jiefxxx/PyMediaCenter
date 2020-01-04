@@ -1,6 +1,7 @@
 import requests
 from PyQt5.QtCore import pyqtSignal
 
+from common_lib.config import MEDIA_TYPE_UNKNOWN
 from common_lib.fct import convert_size, convert_bit_stream, add_px, convert_duration, convert_media_type
 from mediaCenter_lib.model import ServerStateHandler, ModelTableListDict
 from pythread import threaded
@@ -24,6 +25,9 @@ class VideoModel( ServerStateHandler, ModelTableListDict):
                                            ("Junk", "junk", False, None),
                                            ("Last", "last_time", False, None)], **kwargs)
 
+        self.media_type = MEDIA_TYPE_UNKNOWN
+        self.server_name = ""
+
         ServerStateHandler.__init__(self, servers)
         self.refresh()
 
@@ -36,11 +40,20 @@ class VideoModel( ServerStateHandler, ModelTableListDict):
     def on_refresh(self, server_name, section):
         self.refresh()
 
+    def set_type(self, media_type):
+        self.media_type = media_type
+        self.refresh()
+
+    def set_server(self, server_name):
+        self.server_name = server_name
+        self.refresh()
+
     @threaded("httpCom")
     def refresh(self):
         data = []
-        for server in self.servers.all():
-            data += list(server.get_videos(columns=list(self.get_keys())))
+        if len(self.server_name) > 0:
+            data += list(self.servers.server(self.server_name).get_videos(columns=list(self.get_keys()),
+                                                                          media_type=self.media_type))
 
         self.reset_data(data)
         self.end_refreshed()

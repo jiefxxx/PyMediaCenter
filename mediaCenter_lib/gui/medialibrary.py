@@ -70,7 +70,7 @@ class MediaLibrary(QWidget):
         main_vbox = QVBoxLayout()
         main_hbox = QHBoxLayout()
 
-        self.model = self.window().get_model("movie")
+        self.model = self.window().get_model("media")
 
         self.proxy = self.model.get_proxy()
         self.proxy.set_sort_key("title")
