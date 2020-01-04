@@ -1,5 +1,5 @@
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtWidgets import QWidget, QStackedWidget, QLabel, QVBoxLayout, QHBoxLayout
+from PyQt5.QtWidgets import QWidget, QStackedWidget, QLabel, QVBoxLayout, QHBoxLayout, QApplication
 
 from common_lib.config import MEDIA_TYPE_MOVIE, MEDIA_TYPE_TV
 from mediaCenter_lib.gui.media_info.movie_info import MovieInfo
@@ -11,10 +11,15 @@ class MediaInfo(QWidget):
         QWidget.__init__(self, parent)
         self.setFixedWidth(500)
 
-        self.setStyleSheet("QLabel{font-size: 15px;}"
-                           "QTabWidget{font-size: 15px;}"
-                           "QTableView{font-size: 15px;}"
-                           "QToolTip{font-size: 15px}")
+        rect = QApplication.desktop().screenGeometry()
+        base_size = int((rect.width()/1366)*14)
+        print(base_size)
+
+        self.size = self.window().size
+        self.setStyleSheet("QLabel{font-size: "+str(base_size)+"px;}"
+                           "QTabWidget{font-size: "+str(base_size)+"px;}"
+                           "QTableView{font-size: "+str(base_size)+"px;}"
+                           "QToolTip{font-size: "+str(base_size)+"px}")
 
         self.stack = QStackedWidget(self)
 
@@ -28,7 +33,7 @@ class MediaInfo(QWidget):
         self.title = QLabel()
         self.title.setText("Title")
         self.title.setWordWrap(True)
-        self.title.setStyleSheet("QLabel{font-size: 25px;}")
+        self.title.setStyleSheet("QLabel{font-size: "+str(base_size*2)+"px;}")
 
         self.original_title = QLabel()
         self.original_title.setText("Original Title")
