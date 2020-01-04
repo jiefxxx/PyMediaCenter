@@ -1,3 +1,4 @@
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QWidget, QStackedWidget, QLabel, QVBoxLayout, QHBoxLayout, QApplication
 
@@ -12,14 +13,13 @@ class MediaInfo(QWidget):
         self.setFixedWidth(500)
 
         rect = QApplication.desktop().screenGeometry()
-        base_size = int((rect.width()/1366)*14)
-        print(base_size)
+        self.font_size = int((rect.width() / 1366) * 15)
+        self.poster_width = int((rect.width() / 1366) * 154)
 
-        self.size = self.window().size
-        self.setStyleSheet("QLabel{font-size: "+str(base_size)+"px;}"
-                           "QTabWidget{font-size: "+str(base_size)+"px;}"
-                           "QTableView{font-size: "+str(base_size)+"px;}"
-                           "QToolTip{font-size: "+str(base_size)+"px}")
+        self.setStyleSheet("QLabel{font-size: " + str(self.font_size) + "px;}"
+                           "QTabWidget{font-size: " + str(self.font_size) + "px;}"
+                           "QTableView{font-size: " + str(self.font_size) + "px;}"
+                           "QToolTip{font-size: " + str(self.font_size) + "px}")
 
         self.stack = QStackedWidget(self)
 
@@ -27,13 +27,13 @@ class MediaInfo(QWidget):
         self.model.info.connect(self.set_media)
 
         self.poster = QLabel(self)
-        pixmap = QPixmap("./rsc/404.jpg")
+        pixmap = QPixmap("./rsc/404.jpg").scaledToWidth(self.poster_width, mode=Qt.SmoothTransformation)
         self.poster.setPixmap(pixmap)
 
         self.title = QLabel()
         self.title.setText("Title")
         self.title.setWordWrap(True)
-        self.title.setStyleSheet("QLabel{font-size: "+str(base_size*2)+"px;}")
+        self.title.setStyleSheet("QLabel{font-size: " + str(int(self.font_size * 1.7)) + "px;}")
 
         self.original_title = QLabel()
         self.original_title.setText("Original Title")
@@ -77,7 +77,8 @@ class MediaInfo(QWidget):
 
     def set_media(self, media):
         poster_path = self.model.get_poster_path(media["poster_path"], mini=True)
-        pixmap = QPixmap(poster_path)
+        pixmap = QPixmap(poster_path).scaledToWidth(self.poster_width, mode=Qt.SmoothTransformation)
+
         self.poster.setPixmap(pixmap)
 
         self.title.setText(media["title"])
