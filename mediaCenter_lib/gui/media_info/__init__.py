@@ -10,11 +10,12 @@ from mediaCenter_lib.gui.media_info.tv_info import TvInfo
 class MediaInfo(QWidget):
     def __init__(self, parent):
         QWidget.__init__(self, parent)
-        self.setFixedWidth(500)
 
         rect = QApplication.desktop().screenGeometry()
         self.font_size = int((rect.width() / 1366) * 15)
         self.poster_width = int((rect.width() / 1366) * 154)
+        self.pan_width = int((rect.width() / 1366) * 500)
+        self.setFixedWidth(self.pan_width)
 
         self.setStyleSheet("QLabel{font-size: " + str(self.font_size) + "px;}"
                            "QTabWidget{font-size: " + str(self.font_size) + "px;}"

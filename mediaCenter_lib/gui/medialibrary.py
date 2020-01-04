@@ -1,6 +1,6 @@
 from PyQt5.QtCore import Qt, QSize
 from PyQt5.QtGui import QCursor
-from PyQt5.QtWidgets import QListView, QWidget, QHBoxLayout, QVBoxLayout, QLineEdit, QComboBox, QCheckBox
+from PyQt5.QtWidgets import QListView, QWidget, QHBoxLayout, QVBoxLayout, QLineEdit, QComboBox, QCheckBox, QApplication
 
 from mediaCenter_lib.gui.media_info import MediaInfo
 from mediaCenter_lib.gui.menu import VideoMenu
@@ -115,14 +115,18 @@ class MediaPosterList(QListView):
     def __init__(self, parent=None, callback=None):
         QListView.__init__(self, parent)
 
+        rect = QApplication.desktop().screenGeometry()
+        self.poster_height = int((rect.width() / 1366) * 230)
+        self.poster_width = int((rect.width() / 1366) * 154)
+
         self.setFlow(QListView.LeftToRight)
         self.setResizeMode(QListView.Adjust)
         self.setWrapping(True)
         self.setUniformItemSizes(True)
         self.setViewMode(QListView.IconMode)
         self.setLayoutMode(QListView.Batched)
-        self.setGridSize(QSize(158, 234))
-        self.setIconSize(QSize(154, 230))
+        self.setGridSize(QSize(self.poster_width+4, self.poster_height+4))
+        self.setIconSize(QSize(self.poster_width, self.poster_height))
         self.setStyleSheet(MoviesListStylesheet)
 
     def contextMenuEvent(self, event):
