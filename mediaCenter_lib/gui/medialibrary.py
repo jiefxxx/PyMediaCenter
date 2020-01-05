@@ -115,9 +115,9 @@ class MediaPosterList(QListView):
     def __init__(self, parent=None, callback=None):
         QListView.__init__(self, parent)
 
-        rect = QApplication.desktop().screenGeometry()
-        self.poster_height = int((rect.width() / 1366) * 230)
-        self.poster_width = int((rect.width() / 1366) * 154)
+
+        self.poster_height = 230
+        self.poster_width = 154
 
         self.setFlow(QListView.LeftToRight)
         self.setResizeMode(QListView.Adjust)
