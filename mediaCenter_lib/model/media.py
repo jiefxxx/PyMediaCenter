@@ -122,6 +122,9 @@ class SortProxy(QSortFilterProxyModel):
     def filterAcceptsRow(self, source_row, source_parent):
         index = self.sourceModel().index(source_row, 0, source_parent)
         data = self.sourceModel().data(index)
+        if data == QVariant():
+            return False
+
         for genre in self.filter_genres:
             if genre not in data["genre_name"]:
                 return False

@@ -138,22 +138,23 @@ class Server(QObject):
     def delete_video(self, video_id):
         self.get("/video/"+str(video_id)+"/delete")
 
-    def edit_movie(self, video_id, movie_id):
+    def edit_movie(self, video_id, movie_id, copy=False):
         self.get("/video/" + str(video_id) +
                  "/edit?media_type=" + str(MEDIA_TYPE_MOVIE) +
-                 "&movie_id=" + str(movie_id))
+                 "&movie_id=" + str(movie_id) +
+                 "&copy=" + str(int(copy)))
 
     def edit_last_time(self, video_id, last_time):
         self.get("/video/" + str(video_id) +
                  "/last_time?time=" + str(last_time))
 
-    def edit_tv(self, video_id, tv_id, season, episode):
-        print(video_id, tv_id, season, episode)
+    def edit_tv(self, video_id, tv_id, season, episode, copy=False):
         self.get("/video/" + str(video_id) +
                  "/edit?media_type=" + str(MEDIA_TYPE_TV) +
                  "&tv_id=" + str(tv_id) +
                  "&season=" + str(season) +
-                 "&episode=" + str(episode))
+                 "&episode=" + str(episode) +
+                 "&copy=" + str(int(copy)))
 
     def download_video(self, video_id, filename, callback=None):
         first_time = time.time()

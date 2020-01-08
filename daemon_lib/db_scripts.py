@@ -15,7 +15,7 @@ class MovieEdit:
     name = "edit_movie"
     refresh_type = "movies"
 
-    def fct(self, task, db, video, movie_id, directory, ext):
+    def fct(self, task, db, video, movie_id, directory, ext, copy):
         movie_info = get_movie_info(movie_id, language=pyconfig.get("language"))
 
         if movie_info is None:
@@ -25,7 +25,7 @@ class MovieEdit:
         definitive_filename = directory + get_normalized_file_name(movie_info, ext)
         if video["path"] != definitive_filename:
             try:
-                move_file(video["path"], definitive_filename)
+                move_file(video["path"], definitive_filename, copy=copy)
             except FileNotFoundError:
                 pass
         video["path"] = definitive_filename
@@ -36,7 +36,7 @@ class MovieEdit:
         db.set("videos", video)
         db.set("movies", movie_info)
 
-    def description(self, db, video, movie_id, directory, ext):
+    def description(self, db, video, movie_id, directory, ext, copy):
         return "Edit Movie "+video["path"]
 
 
@@ -44,7 +44,7 @@ class TvEdit:
     name = "edit_tv"
     refresh_type = "tvs"
 
-    def fct(self, task, db, tv_video, tv_id, season, episode, directory, ext):
+    def fct(self, task, db, tv_video, tv_id, season, episode, directory, ext, copy):
         tv_info = get_tv_info(tv_id, language=pyconfig.get("language"))
         episode_info = get_episode_info(tv_id, season, episode, language=pyconfig.get("language"))
 
@@ -56,7 +56,7 @@ class TvEdit:
         ensure_dir(os.path.dirname(definitive_filename))
         if tv_video["path"] != definitive_filename:
             try:
-                move_file(tv_video["path"], definitive_filename)
+                move_file(tv_video["path"], definitive_filename, copy=copy)
             except FileNotFoundError:
                 pass
         tv_video["path"] = definitive_filename
@@ -67,7 +67,7 @@ class TvEdit:
         db.set("tv_episodes", episode_info)
         db.set("videos", tv_video)
 
-    def description(self, db, tv_video, tv_id, season, episode, directory, ext):
+    def description(self, db, tv_video, tv_id, season, episode, directory, ext, copy):
         return "Edit Tv "+tv_video["path"]
 
 

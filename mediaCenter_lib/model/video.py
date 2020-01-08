@@ -63,12 +63,12 @@ class VideoModel( ServerStateHandler, ModelTableListDict):
         self.servers.server(video["server"]).delete_video(video["video_id"])
 
     @threaded("httpCom")
-    def edit_movie(self, video, movie_id):
-        self.servers.server(video["server"]).edit_movie(video["video_id"], movie_id)
+    def edit_movie(self, video, movie_id, copy=False):
+        self.servers.server(video["server"]).edit_movie(video["video_id"], movie_id, copy=copy)
 
     @threaded("httpCom")
-    def edit_tv(self, video, tv_id, season, episode):
-        self.servers.server(video["server"]).edit_tv(video["video_id"], tv_id, season, episode)
+    def edit_tv(self, video, tv_id, season, episode, copy=False):
+        self.servers.server(video["server"]).edit_tv(video["video_id"], tv_id, season, episode, copy=copy)
 
     def get_video(self, video):
         return list(self.servers.server(video["server"]).get_videos(video_id=video["video_id"]))[0]

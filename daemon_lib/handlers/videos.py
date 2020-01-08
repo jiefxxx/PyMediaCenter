@@ -52,8 +52,11 @@ class VideoHandler(HTTPHandler):
 
         if action == "edit":
             media_type = int(self.header.url.get("media_type", default=-1))
+
             if media_type == -1:
                 return self.response.send_error(400)
+
+            copy = bool(int(self.header.url.get("copy", default=0)))
 
             directory = os.path.dirname(video["path"])
             ext = video["path"].split(".")[-1]
@@ -64,7 +67,7 @@ class VideoHandler(HTTPHandler):
                 if movie_id == -1:
                     return self.response.send_error(400)
 
-                self.user_data["tasks"].new_task("edit_movie", db, video, movie_id, directory, ext)
+                self.user_data["tasks"].new_task("edit_movie", db, video, movie_id, directory, ext, copy)
 
                 return self.response.send_text(200, "ok " + video["path"])
 
@@ -76,7 +79,7 @@ class VideoHandler(HTTPHandler):
                 if tv_id == -1 or season == -1 or episode == -1:
                     return self.response.send_error(400)
 
-                self.user_data["tasks"].new_task("edit_tv", db, video, tv_id, season, episode, directory, ext)
+                self.user_data["tasks"].new_task("edit_tv", db, video, tv_id, season, episode, directory, ext, copy)
 
                 return self.response.send_text(200, "ok " + video["path"])
 

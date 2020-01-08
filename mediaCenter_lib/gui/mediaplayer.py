@@ -1,11 +1,12 @@
 import sys
 import time
 
+from common_lib.config import MEDIA_TYPE_TV
 from common_lib.fct import convert_duration
 from mediaCenter_lib.gui.dialogs import ConfirmationDialog
 from mediaCenter_lib.gui.widget import QIconButton, QJumpSlider
 
-from PyQt5.QtCore import Qt, QTimer, QSize, QRect, QPoint
+from PyQt5.QtCore import Qt, QTimer, QSize, QRect, QPoint, pyqtSignal
 from PyQt5.QtGui import QPalette, QColor, QPainter
 from PyQt5.QtWidgets import QWidget, QFrame, QHBoxLayout, QLayout, QMenu, QStyle, QStyleOption, QLabel
 
@@ -13,6 +14,8 @@ import vlc
 
 
 class MediaPlayer(QWidget):
+    finished = pyqtSignal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.videos = []
@@ -42,6 +45,10 @@ class MediaPlayer(QWidget):
         elif sys.platform == "win32":  # for Windows
             self.media_player.set_hwnd(self.screen.winId())
 
+        events = self.media_player.event_manager()
+        events.event_attach(vlc.EventType.MediaPlayerEndReached, self.media_finished)
+        self.finished.connect(self.on_finished)
+
         self.is_playing = False
 
         self.timer = QTimer(self)
@@ -53,9 +60,22 @@ class MediaPlayer(QWidget):
 
         self.old_window_state = None
 
+    def on_finished(self):
+        if len(self.videos) > 0:
+            self.play_next()
+        else:
+            self.stop()
+
+    def media_finished(self, event):
+        self.finished.emit()
+
     def set_videos(self, videos):
         self.videos = videos
-        video = self.videos[0]
+        self.play_next()
+
+    def play_next(self):
+        video = self.videos.pop(0)
+        print(video)
         self.play_video(video)
 
     def play_video(self, video):
@@ -191,6 +211,8 @@ class MediaPlayer(QWidget):
             self.play()
         elif event.key() == Qt.Key_Escape:
             self.stop()
+        elif event.key() == Qt.Key_N:
+            self.play_next()
         elif event.key() == Qt.Key_Left:
             self.media_player.set_time(self.media_player.get_time() - 15 * 1000)
         elif event.key() == Qt.Key_Right:

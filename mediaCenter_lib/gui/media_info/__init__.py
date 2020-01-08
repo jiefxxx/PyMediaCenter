@@ -1,3 +1,5 @@
+import time
+
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QWidget, QStackedWidget, QLabel, QVBoxLayout, QHBoxLayout, QApplication
@@ -10,6 +12,8 @@ from mediaCenter_lib.gui.media_info.tv_info import TvInfo
 class MediaInfo(QWidget):
     def __init__(self, parent):
         QWidget.__init__(self, parent)
+
+        self.current = MEDIA_TYPE_MOVIE
 
         rect = QApplication.desktop().screenGeometry()
         self.font_size = int((rect.width() / 1366) * 15)
@@ -51,8 +55,8 @@ class MediaInfo(QWidget):
         self.genres_label.setText("No genres")
         self.genres_label.setWordWrap(True)
 
-        self.movie_info = MovieInfo(self)
-        self.tv_info = TvInfo(self)
+        self.movie_info = MovieInfo(self, parent)
+        self.tv_info = TvInfo(self, parent)
 
         self.stack = QStackedWidget()
         self.stack.addWidget(self.movie_info)
@@ -76,6 +80,18 @@ class MediaInfo(QWidget):
 
         self.setLayout(vbox)
 
+    def focus_table(self, launch=False):
+        if self.current == MEDIA_TYPE_MOVIE:
+            self.movie_info.table.setFocus()
+            self.movie_info.table.setCurrentIndex(self.movie_info.model.index(0, 0))
+            if launch:
+                self.movie_info.on_selection_validate()
+        elif self.current == MEDIA_TYPE_TV:
+            self.tv_info.table.setFocus()
+            self.tv_info.select_higher()
+            if launch:
+                self.tv_info.on_selection_validate()
+
     def set_media(self, media):
         poster_path = self.model.get_poster_path(media["poster_path"], mini=True)
         pixmap = QPixmap(poster_path).scaledToWidth(self.poster_width, mode=Qt.SmoothTransformation)
@@ -89,9 +105,11 @@ class MediaInfo(QWidget):
         self.vote.setText(str(media["vote_average"]))
 
         if media["media_type"] == MEDIA_TYPE_MOVIE:
+            self.current = MEDIA_TYPE_MOVIE
             self.movie_info.set_media(media)
             self.stack.setCurrentWidget(self.movie_info)
         elif media["media_type"] == MEDIA_TYPE_TV:
+            self.current = MEDIA_TYPE_TV
             self.tv_info.set_media(media)
             self.stack.setCurrentWidget(self.tv_info)
 

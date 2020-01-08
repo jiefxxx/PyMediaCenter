@@ -28,18 +28,28 @@ class VideoMenu(QMenu):
         for video in self.videos:
             dlg = TmdbDialog("find movie", self)
             if dlg.exec_() and dlg.info is not None:
-                self._window.get_model("video").edit_movie(video, dlg.info["id"])
+                dlg_c = ConfirmationDialog("keep data ?")
+                if dlg_c.exec_():
+                    copy = True
+                else:
+                    copy = False
+                self._window.get_model("video").edit_movie(video, dlg.info["id"], copy=copy)
 
     def video_tv_edit(self, checked):
         dlg = TmdbTvDialog(self)
         if dlg.exec_() and dlg.info is not None:
             dlg2 = TvMakerDialog(self.videos, dlg.info, self)
             if dlg2.exec_() and dlg2.model.list:
+                dlg_c = ConfirmationDialog("keep data ?")
+                if dlg_c.exec_():
+                    copy = True
+                else:
+                    copy = False
                 for item in dlg2.model.list:
                     self._window.get_model("video").edit_tv(item["video"],
                                                             item["tv_id"],
                                                             item["season_number"],
-                                                            item["episode_number"])
+                                                            item["episode_number"], copy=copy)
 
     def video_download(self):
         for video in self.videos:

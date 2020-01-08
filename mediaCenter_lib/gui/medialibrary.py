@@ -102,7 +102,7 @@ class MediaLibrary(QWidget):
         VideoMenu(self.window(), data).popup(QCursor.pos())
 
     def on_selection(self, item_selection):
-        indexes = item_selection.indexes()
+        indexes = self.selection.selectedIndexes()
         if len(indexes) == 0:
             return
         proxy_index = indexes[0]
@@ -110,11 +110,16 @@ class MediaLibrary(QWidget):
         data = self.model.data(model_index)
         self.model.get_info(data)
 
+    def on_media(self):
+        self.movie_info.focus_table(launch=True)
+
+    def back_focus(self):
+        self.movie_widget.setFocus()
+
 
 class MediaPosterList(QListView):
     def __init__(self, parent=None, callback=None):
         QListView.__init__(self, parent)
-
 
         self.poster_height = 230
         self.poster_width = 154
@@ -122,15 +127,23 @@ class MediaPosterList(QListView):
         self.setFlow(QListView.LeftToRight)
         self.setResizeMode(QListView.Adjust)
         self.setWrapping(True)
-        self.setUniformItemSizes(True)
         self.setViewMode(QListView.IconMode)
         self.setLayoutMode(QListView.Batched)
-        self.setGridSize(QSize(self.poster_width+4, self.poster_height+4))
-        self.setIconSize(QSize(self.poster_width, self.poster_height))
+        self.setGridSize(QSize(158, 234))
+        self.setIconSize(QSize(154, 230))
         self.setStyleSheet(MoviesListStylesheet)
+        self.doubleClicked.connect(self.parent().on_media)
 
     def contextMenuEvent(self, event):
         self.parent().on_menu(event)
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Return:
+            self.parent().movie_info.focus_table()
+        elif event.key() == Qt.Key_Escape:
+            pass
+        else:
+            QListView.keyPressEvent(self, event)
 
 
 MoviesListStylesheet = """

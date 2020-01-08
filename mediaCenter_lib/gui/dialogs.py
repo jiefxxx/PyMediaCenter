@@ -1,6 +1,6 @@
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QVBoxLayout, QLabel, QHBoxLayout, QLineEdit, QTableView, \
-    QHeaderView, QAbstractItemView, QPushButton
+    QHeaderView, QAbstractItemView, QPushButton, QCheckBox
 
 from mediaCenter_lib.gui.widget import WidgetSpinner
 from mediaCenter_lib.model.tmdb import TmdbMovieModel, TmdbTvModel

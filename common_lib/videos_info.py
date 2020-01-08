@@ -1,9 +1,12 @@
 import os
 import re
+import shutil
 import sys
 
 import requests
 import tmdbsimple as tmdb
+
+from common_lib.fct import convert_size
 
 if sys.platform == "win32":
     from winmagic import magic
@@ -15,8 +18,9 @@ from pymediainfo import MediaInfo
 
 
 def check_for_space(path, size):
-    statvfs = os.statvfs(path)
-    free_bytes = statvfs.f_frsize * statvfs.f_bfree
+    stats = shutil.disk_usage(path)
+    free_bytes = stats.free
+    #print(path, convert_size(free_bytes), convert_size(size))
     if size >= free_bytes:
         return False
     return True
