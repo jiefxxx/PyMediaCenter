@@ -12,7 +12,7 @@ class VideoMenu(QMenu):
             data = [data]
         self.videos = data
 
-        self.addAction("play").triggered.connect(lambda checked: self.parent().test(data))
+        self.addAction("play").triggered.connect(lambda checked: self.parent().test(self.videos))
         self.addAction("delete").triggered.connect(self.video_delete)
         self.addAction("edit movie").triggered.connect(self.video_movie_edit)
         self.addAction("download").triggered.connect(self.video_download)
