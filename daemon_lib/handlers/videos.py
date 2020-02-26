@@ -8,6 +8,8 @@ from pynet.http.handler import HTTPHandler
 
 
 class VideoHandler(HTTPHandler):
+    enable_range = True
+
     def GET(self, url):
         video_id = url.regex[0]
         action = url.regex[1]
