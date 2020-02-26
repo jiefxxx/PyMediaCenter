@@ -3,6 +3,7 @@ import time
 from common_lib.config import NOTIFY_REFRESH, NOTIFY_TASK
 from pynet.http.websocket import WebSocketRoom
 
+
 class ScriptsRoom(WebSocketRoom):
     def __init__(self, name=None):
         WebSocketRoom.__init__(self, name)

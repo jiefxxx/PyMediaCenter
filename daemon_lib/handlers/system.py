@@ -1,6 +1,8 @@
 import os
 import time
 
+from pynet.http.exceptions import HTTPError
+
 import pythread
 from pynet.http.handler import HTTPHandler
 from pythread.modes import RunForeverMode
@@ -106,11 +108,12 @@ class Tasks:
 
 
 class SystemHandler(HTTPHandler):
-    def GET(self, url, action):
+    def GET(self, url):
+        action = url.regex[0]
         if action == "suspend":
             os.system("systemctl suspend")
-            return self.response.send_text(200, "ok")
+            return self.response.text(200, "ok")
         if action == "tasks":
-            return self.response.send_json(200, self.user_data["tasks"].json())
-        self.response.send_error(404)
+            return self.response.json(200, self.user_data["tasks"].json())
+        raise HTTPError(404)
 

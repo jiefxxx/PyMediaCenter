@@ -11,7 +11,7 @@ from common_lib.fct import ensure_dir
 from common_lib.videos_info import check_for_space, get_movie_info, get_normalized_file_name, get_video_info, \
     get_tv_info, get_episode_info, get_normalized_episode_name
 from pynet.http.handler import HTTPHandler
-from pynet.http.tools import HTTP_CONNECTION_CONTINUE, HTTP_CONNECTION_ABORT
+from pynet.http import HTTP_CONNECTION_CONTINUE, HTTP_CONNECTION_ABORT
 
 
 class UploadHandler(HTTPHandler):
@@ -38,7 +38,7 @@ class UploadHandler(HTTPHandler):
                 return HTTP_CONNECTION_CONTINUE
         raise Exception("No space available in path :"+str(base_paths))
 
-    def feed(self, data_chunk):
+    def write(self, data_chunk):
         self.data.data_received(data_chunk)
 
     def POST(self, url):
@@ -63,7 +63,7 @@ class UploadHandler(HTTPHandler):
             video_info["media_id"] = movie_info["id"]
             db.set("videos", video_info)
             db.set("movies", movie_info)
-            self.response.send_text(200, "ok " + video_info["path"])
+            self.response.text(200, "ok " + video_info["path"])
             self.user_data["notify"].notify_refresh("movies ")
             return
 
@@ -88,7 +88,7 @@ class UploadHandler(HTTPHandler):
             db.set("tv_episodes", episode_info)
             db.set("videos", video_info)
 
-            self.response.send_text(200, "ok " + video_info["path"])
+            self.response.text(200, "ok " + video_info["path"])
             self.user_data["notify"].notify_refresh("tvs")
             return
 

@@ -1,5 +1,6 @@
 #! python3
 import asyncio
+import logging
 import os
 import time
 
@@ -25,6 +26,8 @@ from pythread import close_all_mode
 
 from common_lib.config import configure_callback
 import pyconfig
+
+logging.basicConfig(level=logging.DEBUG)
 
 pyconfig.load("pymediacenter", proc_name="pymediacenter-daemon", callback=configure_callback)
 
@@ -63,34 +66,29 @@ tasks.create_script(RefreshUnknowns())
 
 loop = asyncio.get_event_loop()
 
-http_server = HTTPServer(loop)
+http_server = HTTPServer(loop=loop, port=4242)
 
-http_server.add_user_data("database", database)
-http_server.add_user_data("notify", scripts_room)
-http_server.add_user_data('tasks', tasks)
+http_server.router.add_user_data("database", database)
+http_server.router.add_user_data("notify", scripts_room)
+http_server.router.add_user_data('tasks', tasks)
 
-http_server.add_route("/movie/?([^/]*)/?", MovieHandler)
-http_server.add_route("/tv/?([^/]*)/?", TvShowHandler)
-http_server.add_route("/episode/?([^/]*)/?", TvEpisodeHandler)
-http_server.add_route("/genre", GenreHandler)
-http_server.add_route("/video/?([^/]*)/?([^/]*)", VideoHandler)
-http_server.add_route("/scripts/?([^/]*)", ScriptHandler, ws=scripts_room)
-http_server.add_route("/upload", UploadHandler)
+http_server.router.add_route("/movie/?([^/]*)/?", MovieHandler)
+http_server.router.add_route("/tv/?([^/]*)/?", TvShowHandler)
+http_server.router.add_route("/episode/?([^/]*)/?", TvEpisodeHandler)
+http_server.router.add_route("/genre", GenreHandler)
+http_server.router.add_route("/video/?([^/]*)/?([^/]*)", VideoHandler)
+http_server.router.add_route("/scripts/?([^/]*)", ScriptHandler, ws=scripts_room)
+http_server.router.add_route("/upload", UploadHandler)
 
-http_server.initialize()
+http_server.start()
 
-loop.set_debug(False)
 protocol = loop.run_until_complete(create_multicast_server(loop, "server_"+pyconfig.get("hostname"), print_iam))
 # loop.create_task(power_management(scripts_room))
 
-try:
-    loop.run_forever()
-except KeyboardInterrupt:
-    pass
+http_server.run_forever()
 
 # Close the server
 protocol.close()
-http_server.close()
 loop.close()
 close_all_mode()
 
