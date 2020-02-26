@@ -51,10 +51,16 @@ class MediaPlayer(QWidget):
 
         self.is_playing = False
 
-        self.timer = QTimer(self)
-        self.timer.setInterval(200)
-        self.timer.timeout.connect(self.update_ui)
-        self.timer.start()
+        self.ui_timer = QTimer(self)
+        self.ui_timer.setInterval(200)
+        self.ui_timer.timeout.connect(self.update_ui)
+
+        self.pos_timer = QTimer(self)
+        self.pos_timer.setInterval(60*1000)
+        self.pos_timer.timeout.connect(self.update_last_time)
+
+        self.ui_timer.start()
+        self.pos_timer.start()
 
         self.prevent_next_signal = False
 
@@ -97,16 +103,14 @@ class MediaPlayer(QWidget):
         if not self.current_video:
             return
         current = int(self.media_player.get_time())
-        if self.current_video["last_time"]+120 < current:
-            self.current_video["last_time"] = current
-            self.video_model.update_last_time(self.current_video)
+        self.current_video["last_time"] = current
+        self.video_model.update_last_time(self.current_video)
 
     def update_ui(self):
         total = int(self.media_player.get_length())
         current = int(self.media_player.get_time())
         self.controllers.set_position(self.media_player.get_position())
         self.controllers.set_timing(current, total)
-        self.update_last_time()
         if self.last_move+3 < time.time() and self.controllers.isVisible():
             self.controllers.setVisible(False)
             if not self.controllers.isVisible():
@@ -125,6 +129,7 @@ class MediaPlayer(QWidget):
         if self.media_player.is_playing():
             self.update_last_time()
             self.media_player.pause()
+            self.update_last_time()
             self.is_playing = False
         else:
             self.media_player.play()
@@ -146,6 +151,7 @@ class MediaPlayer(QWidget):
     def set_position(self):
         if not self.prevent_next_signal:
             self.media_player.set_position(self.controllers.slider.value()/1000.0)
+            self.update_last_time()
         else:
             print("prevented")
             self.prevent_next_signal = False

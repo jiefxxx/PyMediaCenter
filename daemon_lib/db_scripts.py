@@ -1,6 +1,7 @@
 import os
 
 import magic
+from pynet.http.tools import get_mimetype
 
 import pyconfig
 from common_lib.config import MEDIA_TYPE_UNKNOWN, MEDIA_TYPE_MOVIE, MEDIA_TYPE_TV
@@ -84,7 +85,6 @@ class GenresUpdate:
 
 
 def update_videos_worker(task, paths, media_type, db):
-    mime = magic.Magic(mime=True)
     if not task.is_alive():
         return
     for root_path in pyconfig.get(paths):
@@ -92,11 +92,12 @@ def update_videos_worker(task, paths, media_type, db):
         size = len(videos)
         i = 0
         for path in videos:
+            print(path)
             if not task.is_alive():
                 return
             i += 1
             task.do_progress(i/size, path)
-            if mime.from_file(path).split("/")[0] != "video":
+            if get_mimetype(path).split("/")[0] != "video":
                 pass
             elif len(list(db.get("videos", where={"path": path}))) == 0:
                 video = get_video_info(path, media_type)
