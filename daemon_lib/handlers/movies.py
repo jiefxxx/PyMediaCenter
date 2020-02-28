@@ -3,6 +3,7 @@ from pynet.http.handler import HTTPHandler
 
 
 class MovieHandler(HTTPHandler):
+    compression = "gzip"
 
     def GET(self, url):
         movie_id = url.regex[0]

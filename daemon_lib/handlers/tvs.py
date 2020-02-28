@@ -3,6 +3,7 @@ from pynet.http.handler import HTTPHandler
 
 
 class TvShowHandler(HTTPHandler):
+    compression = "gzip"
 
     def GET(self, url):
         tv_id = url.regex[0]
@@ -25,6 +26,7 @@ class TvShowHandler(HTTPHandler):
 
 
 class TvEpisodeHandler(HTTPHandler):
+    compression = "gzip"
 
     def GET(self, url):
         episode_id = url.regex[0]
