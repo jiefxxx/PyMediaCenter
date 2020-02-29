@@ -95,11 +95,11 @@ class Server(QObject):
             return
 
     def get_stream(self, video_id):
-        return self._server_address() + "/video/" + str(video_id) + "/stream"
+        return self._server_address() + "/media_stream"+url_param({"video_id": video_id})
 
     def get_movies(self, **kwargs):
         try:
-            for el in self.get_json("/movie"+url_param(kwargs)):
+            for el in self.get_json("/media_info/movies"+url_param(kwargs)):
                 el["server"] = self.name
                 yield el
         except ServerNotConnected:
@@ -107,7 +107,7 @@ class Server(QObject):
 
     def get_tv_shows(self, **kwargs):
         try:
-            for el in self.get_json("/tv"+url_param(kwargs)):
+            for el in self.get_json("/media_info/tv_shows"+url_param(kwargs)):
                 el["server"] = self.name
                 yield el
         except ServerNotConnected:
@@ -115,21 +115,15 @@ class Server(QObject):
 
     def get_tv_episodes(self, **kwargs):
         try:
-            for el in self.get_json("/episode"+url_param(kwargs)):
+            for el in self.get_json("/media_info/episodes"+url_param(kwargs)):
                 el["server"] = self.name
                 yield el
         except ServerNotConnected:
             return
 
-    def get_genres(self):
-        try:
-            return self.get_json('/genre')
-        except ServerNotConnected:
-            return []
-
     def get_videos(self, **kwargs):
         try:
-            for el in self.get_json('/video' + url_param(kwargs)):
+            for el in self.get_json("/media_info/videos"+url_param(kwargs)):
                 el["server"] = self.name
                 yield el
         except ServerNotConnected:
@@ -159,7 +153,7 @@ class Server(QObject):
     def download_video(self, video_id, filename, callback=None):
         first_time = time.time()
         with self.session.get("http://" + self.address + ":" + str(self.port) +
-                              "/video/" + str(video_id) + "/stream", stream=True) as r:
+                              "/media_stream"+url_param({"video_id": video_id}), stream=True) as r:
 
             if r.status_code == 200:
                 size = int(r.headers['Content-length'])
@@ -202,14 +196,15 @@ class Server(QObject):
 
             m = MultipartEncoderMonitor.from_fields(
                 fields={"json": json.dumps({"media_id": media_id,
-                                            "ext": filename.split(".")[-1]}),
+                                            "ext": filename.split(".")[-1],
+                                            "filename": filename.split("/")[-1]}),
                         'video': open(filename, 'rb')},
                 callback=_callback
             )
 
             try:
                 r = self.session.post("http://" + self.address + ":" + str(self.port) +
-                                      "/upload?media_type="+str(media_type), data=m,
+                                      "/media_stream?media_type="+str(media_type), data=m,
                                       headers={'Content-Type': m.content_type})
                 if r.status_code == 200:
                     if callback:

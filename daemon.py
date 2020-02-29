@@ -8,11 +8,9 @@ import tmdbsimple as tmdb
 
 from daemon_lib.db_scripts import GenresUpdate, FilesUpdate, TvsUpdate, MoviesUpdate, MovieEdit, TvEdit, RefreshUnknowns
 from daemon_lib.handlers.system import Tasks
-from daemon_lib.handlers.tvs import TvShowHandler, TvEpisodeHandler
 from daemon_lib.handlers.videos import VideoHandler
-from daemon_lib.handlers.genres import GenreHandler
-from daemon_lib.handlers.movies import MovieHandler
-from daemon_lib.handlers.upload import UploadHandler
+from daemon_lib.handlers.media import MovieHandler, TvShowHandler, TvEpisodeHandler, VideoInfoHandler
+from daemon_lib.handlers.stream import StreamHandler
 from daemon_lib.handlers.scripts import ScriptHandler
 from daemon_lib.db_description import database_description
 from daemon_lib.ws_room import ScriptsRoom
@@ -72,13 +70,15 @@ http_server.router.add_user_data("database", database)
 http_server.router.add_user_data("notify", scripts_room)
 http_server.router.add_user_data('tasks', tasks)
 
-http_server.router.add_route("/movie/?([^/]*)/?", MovieHandler)
-http_server.router.add_route("/tv/?([^/]*)/?", TvShowHandler)
-http_server.router.add_route("/episode/?([^/]*)/?", TvEpisodeHandler)
-http_server.router.add_route("/genre", GenreHandler)
+http_server.router.add_route("/media_info/movies", MovieHandler)
+http_server.router.add_route("/media_info/tv_shows", TvShowHandler)
+http_server.router.add_route("/media_info/episodes", TvEpisodeHandler)
+http_server.router.add_route("/media_info/videos", VideoInfoHandler)
+http_server.router.add_route("/media_stream", StreamHandler)
+
 http_server.router.add_route("/video/?([^/]*)/?([^/]*)", VideoHandler)
 http_server.router.add_route("/scripts/?([^/]*)", ScriptHandler, ws=scripts_room)
-http_server.router.add_route("/upload", UploadHandler)
+
 
 http_server.start()
 

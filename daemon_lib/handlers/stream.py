@@ -2,41 +2,48 @@ import json
 import os
 import time
 
+from pynet.http.exceptions import HTTPError
 from streaming_form_data import StreamingFormDataParser
 from streaming_form_data.targets import FileTarget, ValueTarget
 
 import pyconfig
-from common_lib.config import MEDIA_TYPE_MOVIE, MEDIA_TYPE_TV
+from common_lib.config import MEDIA_TYPE_MOVIE, MEDIA_TYPE_TV, MEDIA_TYPE_UNKNOWN
 from common_lib.fct import ensure_dir
 from common_lib.videos_info import check_for_space, get_movie_info, get_normalized_file_name, get_video_info, \
     get_tv_info, get_episode_info, get_normalized_episode_name
 from pynet.http.handler import HTTPHandler
-from pynet.http import HTTP_CONNECTION_CONTINUE, HTTP_CONNECTION_ABORT
+from pynet.http import HTTP_CONNECTION_CONTINUE
 
 
-class UploadHandler(HTTPHandler):
-    def prepare(self):
-        self.user_data["media_type"] = int(self.header.url.get("media_type", default=0))
-        approximated_size = int(self.header.fields.get("Content-Length", default=0))
-        if self.user_data["media_type"] == MEDIA_TYPE_MOVIE:
+class StreamHandler(HTTPHandler):
+    enable_range = True
 
-            base_paths = pyconfig.get("videos.movies.path")
+    async def prepare(self):
+        ret = await HTTPHandler.prepare(self)
+        if self.header.query == "POST":
+            base_paths = []
+            self.user_data["media_type"] = int(self.header.url.get("media_type", default=0))
+            approximated_size = int(self.header.fields.get("Content-Length", default=0))
+            if self.user_data["media_type"] == MEDIA_TYPE_MOVIE:
+                base_paths = pyconfig.get("videos.movies.path")
 
-        elif self.user_data["media_type"] == MEDIA_TYPE_TV:
-            base_paths = pyconfig.get("videos.tvs.path")
-        else:
-            return HTTP_CONNECTION_ABORT
+            elif self.user_data["media_type"] == MEDIA_TYPE_TV:
+                base_paths = pyconfig.get("videos.tvs.path")
 
-        for path in base_paths:
+            elif self.user_data["media_type"] == MEDIA_TYPE_UNKNOWN:
+                base_paths = pyconfig.get("videos.downloads.path")
 
-            if check_for_space(path, approximated_size):
-                self.data = StreamingFormDataParser(headers={'Content-Type': self.header.fields.get("Content-Type")})
-                self.user_data["file"] = FileTarget(path+"/temporary."+str(time.time())+".video")
-                self.user_data["json"] = ValueTarget()
-                self.data.register('video', self.user_data["file"])
-                self.data.register('json', self.user_data["json"])
-                return HTTP_CONNECTION_CONTINUE
-        raise Exception("No space available in path :"+str(base_paths))
+            for path in base_paths:
+
+                if check_for_space(path, approximated_size):
+                    self.data = StreamingFormDataParser(headers={'Content-Type': self.header.fields.get("Content-Type")})
+                    self.user_data["file"] = FileTarget(path+"/temporary."+str(time.time())+".video")
+                    self.user_data["json"] = ValueTarget()
+                    self.data.register('video', self.user_data["file"])
+                    self.data.register('json', self.user_data["json"])
+                    return HTTP_CONNECTION_CONTINUE
+            raise Exception("No space available in path :"+str(base_paths))
+        return ret
 
     def write(self, data_chunk):
         self.data.data_received(data_chunk)
@@ -64,7 +71,7 @@ class UploadHandler(HTTPHandler):
             db.set("videos", video_info)
             db.set("movies", movie_info)
             self.response.text(200, "ok " + video_info["path"])
-            self.user_data["notify"].notify_refresh("movies ")
+            self.user_data["notify"].notify_refresh("movies")
             return
 
         elif media_type == MEDIA_TYPE_TV:
@@ -92,5 +99,24 @@ class UploadHandler(HTTPHandler):
             self.user_data["notify"].notify_refresh("tvs")
             return
 
-        print("media_type "+str(media_type))
-        self.response.send_error(400)
+        elif media_type == MEDIA_TYPE_UNKNOWN:
+            definitive_filename = os.path.dirname(temporary_filename) + "/" + json_data["filename"]
+            ensure_dir(os.path.dirname(definitive_filename))
+            os.rename(temporary_filename, definitive_filename)
+
+            video_info = get_video_info(definitive_filename, MEDIA_TYPE_UNKNOWN)
+
+            db.set("videos", video_info)
+            self.user_data["notify"].notify_refresh("tvs")
+
+        raise HTTPError(400)
+
+    def GET(self, url):
+        video_id = url.get("video_id", data_type=int)
+        db = self.user_data["database"]
+        videos = list(db.get("videos", where={'video_id': video_id}))
+        if len(videos) > 0:
+            return self.file(videos[0]["path"])
+
+        raise HTTPError(404)
+
